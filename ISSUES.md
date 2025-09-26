@@ -292,16 +292,16 @@ service_name = ticket.service_type.name_fr if ticket.service_type else 'Unknown'
 **Affected Component**: Authentication System
 
 #### Problem Description
-- Agent login redirecting to wrong dashboard (`/dashboard` instead of `/agent/dashboard`)
-- Admin login redirecting incorrectly
+- Admin login redirecting to wrong dashboard path
+- Agent login redirecting incorrectly
 - Route conflicts between admin and agent dashboards
 - Template references using incorrect route endpoints
 
 #### Solution Implemented
 1. **Fixed Login Redirect Logic**:
-   - Updated login JavaScript to redirect admins to `/dashboard`
+   - Updated login JavaScript to redirect admins to `/admin/dashboard`
    - Updated login JavaScript to redirect agents to `/agent/dashboard`
-   - Removed conflicting `/dashboard` route from main routes
+   - Resolved route conflicts between admin and agent dashboards
    - Updated all template references to use correct endpoints
 
 #### Verification

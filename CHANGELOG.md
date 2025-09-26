@@ -99,9 +99,9 @@ This release represents a complete overhaul of the CNI Digital Queue Management 
 ### ✅ Phase 5: User Experience and Interface Improvements
 #### Fixed
 - **Login Redirect Issues**
-  - Fixed admin login redirecting to `/admin/dashboard` instead of `/dashboard`
+  - Fixed admin login to redirect correctly to `/admin/dashboard`
   - Fixed agent login redirecting to `/agent/dashboard` correctly
-  - Removed broken `/dashboard` route that was causing conflicts
+  - Resolved route conflicts between admin and agent dashboards
   - Updated all template references to use correct route endpoints
 
 #### Added

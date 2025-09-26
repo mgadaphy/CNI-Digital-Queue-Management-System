@@ -64,7 +64,7 @@ python run.py
 - **Main Application**: http://localhost:5000
 - **Login Page**: http://localhost:5000/auth/login-page
 - **Kiosk Interface**: http://localhost:5000/kiosk
-- **Admin Dashboard**: http://localhost:5000/dashboard (after admin login)
+- **Admin Dashboard**: http://localhost:5000/admin/dashboard (after admin login)
 - **Agent Dashboard**: http://localhost:5000/agent/dashboard (after agent login)
 
 ## 🔐 Default Login Credentials
@@ -72,7 +72,7 @@ python run.py
 ### Admin Access
 - **Username**: ADMIN001
 - **Password**: admin123
-- **Dashboard**: `/dashboard`
+- **Dashboard**: `/admin/dashboard`
 
 ### Agent Access  
 - **Username**: AGT001 (Marie Kouassi)
