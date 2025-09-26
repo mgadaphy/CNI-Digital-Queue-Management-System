@@ -259,6 +259,42 @@ def admin_profile():
     """Admin profile page"""
     return render_template('admin_profile.html')
 
+@admin_bp.route('/profile/update', methods=['POST'])
+@login_required
+def update_admin_profile():
+    """Update admin profile"""
+    try:
+        data = request.get_json()
+        
+        # Get current user (admin)
+        admin = current_user
+        
+        # Update basic info
+        if 'first_name' in data:
+            admin.first_name = data['first_name']
+        if 'last_name' in data:
+            admin.last_name = data['last_name']
+        if 'email' in data:
+            admin.email = data['email']
+        
+        # Update password if provided
+        if 'password' in data and data['password']:
+            admin.set_password(data['password'])
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Profile updated successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error updating profile: {str(e)}'
+        }), 500
+
 @admin_bp.route('/settings')
 @login_required
 def admin_settings():

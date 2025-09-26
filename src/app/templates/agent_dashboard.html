@@ -177,6 +177,48 @@ function getCsrfToken() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Handle Agent Logout Button
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Show loading state
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging out...';
+            this.disabled = true;
+            
+            // Call the global logout function from base template
+            if (typeof handleLogout === 'function') {
+                handleLogout(e);
+            } else {
+                // Fallback logout logic
+                fetch('/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': getCsrfToken()
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message === 'Logout successful') {
+                        window.location.href = '/auth/login-page';
+                    } else {
+                        alert('Logout failed: ' + data.message);
+                        this.innerHTML = 'Logout';
+                        this.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                    alert('An error occurred during logout.');
+                    this.innerHTML = 'Logout';
+                    this.disabled = false;
+                });
+            }
+        });
+    }
+
     // Handle Call Next Citizen button
     const callNextBtn = document.getElementById('callNextBtn');
     if (callNextBtn && !callNextBtn.disabled && !callNextBtn.classList.contains('disabled')) {
@@ -286,6 +328,59 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+    
+    // Force dropdown initialization for agent dashboard - SIMPLIFIED APPROACH
+    setTimeout(function() {
+        console.log('Agent dashboard: Initializing dropdown...');
+        const userDropdown = document.getElementById('userDropdown');
+        if (userDropdown) {
+            console.log('Agent dashboard: User dropdown found');
+            
+            // SIMPLE MANUAL DROPDOWN - Skip Bootstrap complexity
+            userDropdown.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Agent dashboard: Dropdown clicked');
+                
+                const menu = this.nextElementSibling;
+                if (menu && menu.classList.contains('dropdown-menu')) {
+                    // Close any other open dropdowns first
+                    document.querySelectorAll('.dropdown-menu.show').forEach(m => {
+                        if (m !== menu) {
+                            m.classList.remove('show');
+                        }
+                    });
+                    
+                    // Toggle this dropdown
+                    const isShowing = menu.classList.contains('show');
+                    if (isShowing) {
+                        menu.classList.remove('show');
+                        console.log('Agent dashboard: Dropdown closed');
+                    } else {
+                        menu.classList.add('show');
+                        console.log('Agent dashboard: Dropdown opened');
+                    }
+                } else {
+                    console.error('Agent dashboard: Dropdown menu not found');
+                }
+            });
+            
+            console.log('Agent dashboard: Manual dropdown handler added');
+        } else {
+            console.error('Agent dashboard: User dropdown not found');
+        }
+        
+        // Add global click handler for agent dashboard
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+                console.log('Agent dashboard: All dropdowns closed by outside click');
+            }
+        });
+        
+    }, 300); // Reduced delay
 });
 </script>
 {% endblock %}

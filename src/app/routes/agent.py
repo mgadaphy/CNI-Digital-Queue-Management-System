@@ -396,3 +396,103 @@ def call_next_citizen():
             'success': False,
             'message': f'Error calling next citizen: {str(e)}'
         }), 500
+
+@agent_bp.route('/profile')
+@login_required
+def agent_profile():
+    """Agent profile page"""
+    agent = current_user
+    return render_template('agent_profile.html', agent=agent)
+
+@agent_bp.route('/profile/update', methods=['POST'])
+@login_required
+def update_agent_profile():
+    """Update agent profile"""
+    try:
+        data = request.get_json()
+        
+        # Get current agent
+        agent = current_user
+        
+        # Update basic info
+        if 'first_name' in data:
+            agent.first_name = data['first_name']
+        if 'last_name' in data:
+            agent.last_name = data['last_name']
+        if 'email' in data:
+            agent.email = data['email']
+        if 'phone' in data:
+            agent.phone = data['phone']
+        
+        # Update password if provided
+        if 'password' in data and data['password']:
+            agent.set_password(data['password'])
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Profile updated successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error updating profile: {str(e)}'
+        }), 500
+
+@agent_bp.route('/settings')
+@login_required
+def agent_settings():
+    """Agent settings page"""
+    agent = current_user
+    
+    # Get available stations for assignment
+    stations = Station.query.filter_by(is_active=True).all()
+    
+    # Get available service types for specializations
+    service_types = ServiceType.query.filter_by(is_active=True).all()
+    
+    return render_template('agent_settings.html', 
+                         agent=agent, 
+                         stations=stations,
+                         service_types=service_types)
+
+@agent_bp.route('/settings/update', methods=['POST'])
+@login_required
+def update_agent_settings():
+    """Update agent settings"""
+    try:
+        data = request.get_json()
+        
+        # Get current agent
+        agent = current_user
+        
+        # Update notification preferences
+        if 'email_notifications' in data:
+            # For now, we'll store this in a simple way
+            # In a real system, you'd have a separate preferences table
+            pass
+        
+        # Update specializations if provided
+        if 'specializations' in data:
+            agent.specializations = data['specializations']
+        
+        # Update preferred station if provided
+        if 'preferred_station_id' in data:
+            agent.current_station_id = data['preferred_station_id']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Settings updated successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error updating settings: {str(e)}'
+        }), 500
