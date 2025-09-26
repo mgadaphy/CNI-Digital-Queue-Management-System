@@ -28,29 +28,22 @@ def select_service():
     """Service selection screen"""
     language = session.get('language', 'fr')
     
-    # Define CNI-related services in priority order
-    cni_service_codes = ['NEW_APP', 'RENEWAL', 'COLLECTION', 'CORRECTION']
+    # Define ONLY core CNI services that are currently being worked on
+    # These are the services citizens can actually complete at the center
+    active_cni_service_codes = ['COLLECTION', 'RENEWAL', 'NEW_APP', 'CORRECTION']
     
-    # Get all active services
-    all_services = ServiceType.query.filter_by(is_active=True).all()
+    # Get only active CNI services that are currently operational
+    cni_services = ServiceType.query.filter(
+        ServiceType.is_active == True,
+        ServiceType.code.in_(active_cni_service_codes)
+    ).all()
     
-    # Separate CNI and non-CNI services
-    cni_services = []
-    other_services = []
+    # Sort CNI services by priority (Collection first as quickest, Correction last as most complex)
+    priority_order = ['COLLECTION', 'RENEWAL', 'NEW_APP', 'CORRECTION']
+    cni_services.sort(key=lambda x: priority_order.index(x.code) if x.code in priority_order else 999)
     
-    for service in all_services:
-        if service.code in cni_service_codes:
-            cni_services.append(service)
-        else:
-            other_services.append(service)
-    
-    # Sort CNI services by the defined priority order
-    cni_services.sort(key=lambda x: cni_service_codes.index(x.code))
-    # Sort other services by priority level
-    other_services.sort(key=lambda x: x.priority_level)
-    
-    # Combine services with CNI services first
-    ordered_services = cni_services + other_services
+    # Only show currently operational CNI services
+    ordered_services = cni_services
     
     services_data = []
     for service in ordered_services:
@@ -61,7 +54,7 @@ def select_service():
             'description': service.description_fr if language == 'fr' else service.description_en,
             'estimated_duration': service.estimated_duration,
             'priority_level': service.priority_level,
-            'is_cni_service': service.code in cni_service_codes
+            'is_cni_service': True  # All services shown are CNI services now
         })
     
     return render_template('kiosk_services.html', 
@@ -246,7 +239,7 @@ def show_ticket(ticket_number):
         service_type = ticket.service_type
         language = session.get('language', 'fr')
         
-        # Calculate current queue position
+        # Calculate current queue position (lower priority_score = higher priority)
         current_position = Queue.query.filter(
             Queue.service_type_id == service_type.id,
             Queue.status == 'waiting',

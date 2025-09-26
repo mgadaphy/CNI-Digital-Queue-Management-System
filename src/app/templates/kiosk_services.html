@@ -449,65 +449,7 @@
                 </div>
             </div>
 
-            <!-- Other Services Section -->
-            {% set other_services = services|selectattr('is_cni_service', 'equalto', false)|list %}
-            {% if other_services %}
-            <div class="service-section">
-                <h2 class="section-title">
-                    <i class="fas fa-cogs me-3"></i>
-                    {% if language == 'fr' %}
-                        Autres Services
-                    {% else %}
-                        Other Services
-                    {% endif %}
-                </h2>
-                <div class="services-grid">
-                    {% for service in other_services %}
-                    <div class="service-card other-service" data-service-id="{{ service.id }}" data-service-name="{{ service.name }}">
-                        <div class="service-header">
-                            <div class="service-icon">
-                                {% if service.code == 'EMERGENCY' %}
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                {% elif service.code == 'APPOINTMENT' %}
-                                    <i class="fas fa-calendar-check"></i>
-                                {% else %}
-                                    <i class="fas fa-cog"></i>
-                                {% endif %}
-                            </div>
-                            <div>
-                                <h3 class="service-title">{{ service.name }}</h3>
-                                <span class="service-code">{{ service.code }}</span>
-                            </div>
-                        </div>
-                        
-                        <p class="service-description">{{ service.description }}</p>
-                        
-                        <div class="service-details">
-                            <div class="service-duration">
-                                <i class="fas fa-clock me-2"></i>
-                                {{ service.estimated_duration }} 
-                                {% if language == 'fr' %}min{% else %}min{% endif %}
-                            </div>
-                            <span class="service-priority 
-                                {% if service.priority_level <= 3 %}priority-high
-                                {% elif service.priority_level <= 6 %}priority-medium
-                                {% else %}priority-low{% endif %}">
-                                {% if language == 'fr' %}
-                                    {% if service.priority_level <= 3 %}Haute
-                                    {% elif service.priority_level <= 6 %}Moyenne
-                                    {% else %}Basse{% endif %}
-                                {% else %}
-                                    {% if service.priority_level <= 3 %}High
-                                    {% elif service.priority_level <= 6 %}Medium
-                                    {% else %}Low{% endif %}
-                                {% endif %}
-                            </span>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
+            <!-- Other Services Section Removed - Only showing core CNI services for now -->
             
             <div class="continue-section">
                 <div class="selection-info" id="selection-info">
