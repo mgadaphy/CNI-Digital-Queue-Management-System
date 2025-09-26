@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Agent Dashboard</h1>
+    <div>
+        <span id="agent-status-badge" class="badge bg-success fs-6">Status: {{ agent.status|capitalize }}</span>
+        <div class="ms-2 d-flex align-items-center">
+            <select id="status-select" class="form-select me-2">
+                <option value="available" {% if agent.status == 'available' %}selected{% endif %}>Available</option>
+                <option value="on_break" {% if agent.status == 'on_break' %}selected{% endif %}>On Break</option>
+                <option value="busy" {% if agent.status == 'busy' %}selected{% endif %}>Busy</option>
+                <option value="offline" {% if agent.status == 'offline' %}selected{% endif %}>Offline</option>
+            </select>
+            <button id="logout-btn" class="btn btn-danger">Logout</button>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Citizens Served Today</h5>
+                <p id="served-today" class="card-text display-4">{{ metrics.citizens_served_today }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">Average Service Time</h5>
+                <p id="avg-time" class="card-text display-4">{{ metrics.avg_service_time }} min</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if agent.status == 'busy' and currently_serving %}
+<div class="card mb-4 text-white bg-primary">
+    <div class="card-header"><h4>Currently Serving</h4></div>
+    <div class="card-body text-center">
+        <h2 class="display-4">{{ currently_serving.ticket_number }}</h2>
+        <p class="lead">Service: {{ currently_serving.service_type.name }}</p>
+        <p class="mb-3">Citizen: {{ currently_serving.citizen.first_name }} {{ currently_serving.citizen.last_name }}</p>
+        <button id="completeServiceBtn" data-ticket-id="{{ currently_serving.id }}" class="btn btn-light btn-lg">Complete Service</button>
+    </div>
+</div>
+{% else %}
+<div class="card mb-4">
+    <div class="card-header"><h4>Next Citizen to Call</h4></div>
+    <div class="card-body text-center">
+        {% if next_citizen %}
+            <h2 class="display-4">{{ next_citizen.ticket_number }}</h2>
+            <p class="lead">Service: {{ next_citizen.service_type.name }}</p>
+            <p class="mb-3">Citizen: {{ next_citizen.citizen.first_name }} {{ next_citizen.citizen.last_name }}</p>
+        {% else %}
+            <h2 class="display-4">-</h2>
+            <p class="lead">No tickets assigned to you.</p>
+        {% endif %}
+        <button id="callNextBtn" class="btn btn-primary btn-lg {% if not next_citizen %}disabled{% endif %}"{% if not next_citizen %} disabled{% endif %}>Call Next Citizen</button>
+    </div>
+</div>
+{% endif %}
+
+<!-- Assigned Tickets Section -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4><i class="fas fa-clipboard-list"></i> My Assigned Tickets</h4>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshAssignedTickets()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <span class="badge bg-info ms-2">{{ assigned_tickets|length }} tickets</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="assignedTicketsTable">
+                        <thead>
+                            <tr>
+                                <th>Ticket #</th>
+                                <th>Citizen</th>
+                                <th>Service</th>
+                                <th>Priority</th>
+                                <th>Wait Time</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Debug: Show assigned_tickets count -->
+                            <!-- Assigned tickets count: {{ assigned_tickets|length }} -->
+                            {% if assigned_tickets %}
+                                {% for ticket in assigned_tickets %}
+                                <tr>
+                                    <td><strong>{{ ticket.ticket_number }}</strong></td>
+                                    <td>{{ ticket.citizen.first_name }} {{ ticket.citizen.last_name }}</td>
+                                    <td>{{ ticket.service_type.name_fr if ticket.service_type else 'Unknown' }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if ticket.priority_score >= 8 %}danger{% elif ticket.priority_score >= 5 %}warning{% else %}info{% endif %}">
+                                            {{ ticket.priority_score }}
+                                        </span>
+                                    </td>
+                                    <td>{{ ticket.wait_time_display }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if ticket.status == 'in_progress' %}success{% elif ticket.status == 'waiting' %}warning{% else %}secondary{% endif %}">
+                                            {{ ticket.status|replace('_', ' ')|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if ticket.status == 'waiting' %}
+                                            <button class="btn btn-sm btn-primary" onclick="callSpecificTicket('{{ ticket.id }}')">
+                                                <i class="fas fa-phone"></i> Call
+                                            </button>
+                                        {% elif ticket.status == 'in_progress' %}
+                                            <button class="btn btn-sm btn-success" onclick="completeSpecificTicket('{{ ticket.id }}')">
+                                                <i class="fas fa-check"></i> Complete
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">No tickets assigned to you</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h4>Current Queue</h4>
+    </div>
+    <div class="card-body">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Ticket #</th>
+                    <th>Service Type</th>
+                    <th>Wait Time</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in queue_items %}
+                <tr>
+                    <td>{{ item.ticket_number }}</td>
+                    <td>{{ item.service_type.name_en }}</td>
+                    <td>{{ (datetime.utcnow() - item.created_at).seconds // 60 }} min</td>
+                    <td><span class="badge bg-warning">{{ item.status }}</span></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center">No one is currently in the queue.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// CSRF token function (fallback if not available globally)
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle Call Next Citizen button
+    const callNextBtn = document.getElementById('callNextBtn');
+    if (callNextBtn && !callNextBtn.disabled && !callNextBtn.classList.contains('disabled')) {
+        callNextBtn.addEventListener('click', function() {
+            // Disable button to prevent double clicks
+            this.disabled = true;
+            this.textContent = 'Calling...';
+            
+            // Send POST request to call next citizen
+            fetch('/agent/call_next', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken()
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    this.textContent = '✓ Called';
+                    this.classList.remove('btn-primary');
+                    this.classList.add('btn-success');
+                    
+                    // Reload the page after a short delay to show updated dashboard
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    alert('Error: ' + data.message);
+                    // Re-enable button
+                    this.disabled = false;
+                    this.textContent = 'Call Next Citizen';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to call next citizen: ' + error.message);
+                // Re-enable button
+                this.disabled = false;
+                this.textContent = 'Call Next Citizen';
+            });
+        });
+    }
+
+    // Handle Complete Service button
+    const completeServiceBtn = document.getElementById('completeServiceBtn');
+    if (completeServiceBtn) {
+        completeServiceBtn.addEventListener('click', function() {
+            const ticketId = this.getAttribute('data-ticket-id');
+            
+            if (!ticketId) {
+                alert('No ticket ID found');
+                return;
+            }
+            
+            // Disable button to prevent double clicks
+            this.disabled = true;
+            this.textContent = 'Completing...';
+            
+            // Send POST request to complete service
+            fetch('/agent/complete_service', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    ticket_id: ticketId
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    this.textContent = '✓ Completed';
+                    this.classList.remove('btn-light');
+                    this.classList.add('btn-success');
+                    
+                    // Reload the page after a short delay to show success state
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    alert('Error: ' + data.message);
+                    // Re-enable button
+                    this.disabled = false;
+                    this.textContent = 'Complete Service';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to complete service: ' + error.message);
+                // Re-enable button
+                this.disabled = false;
+                this.textContent = 'Complete Service';
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

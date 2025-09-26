@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}User Login - CNI Queue Management{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-circle me-2"></i>
+                        Citizen Login
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label for="enrollmentCode" class="form-label">
+                                <i class="fas fa-id-card me-1"></i>
+                                Enrollment Code
+                            </label>
+                            <input type="text" 
+                                   class="form-control form-control-lg" 
+                                   id="enrollmentCode" 
+                                   name="enrollment_code"
+                                   placeholder="Enter your enrollment code"
+                                   required
+                                   autocomplete="off"
+                                   style="text-transform: uppercase;">
+                            <div class="form-text">
+                                Enter the enrollment code you received during pre-registration.
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="loginBtn">
+                                <i class="fas fa-sign-in-alt me-2"></i>
+                                Login
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="text-center">
+                        <p class="text-muted mb-2">Don't have an enrollment code?</p>
+                        <a href="#" class="btn btn-outline-secondary" onclick="showEnrollmentInfo()">
+                            <i class="fas fa-info-circle me-1"></i>
+                            How to Get One
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sample Codes for Testing -->
+            <div class="card mt-3" id="testCodes" style="display: none;">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-flask me-1"></i>
+                        Test Enrollment Codes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-2">For testing purposes, you can use these sample codes:</p>
+                    <div class="row">
+                        <div class="col-6">
+                            <button class="btn btn-sm btn-outline-info w-100 mb-1" onclick="fillCode('PE-20250703-100432')">
+                                PE-20250703-100432
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-sm btn-outline-info w-100 mb-1" onclick="fillCode('PE-20250703-100433')">
+                                PE-20250703-100433
+                            </button>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-link p-0" onclick="toggleTestCodes()">
+                        Hide test codes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enrollment Info Modal -->
+<div class="modal fade" id="enrollmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle me-2"></i>
+                    How to Get an Enrollment Code
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <h6><i class="fas fa-globe me-2 text-primary"></i>Online Pre-Registration</h6>
+                        <p class="text-muted">Visit the CNI official website and complete the online pre-registration form. You'll receive an enrollment code via email or SMS.</p>
+                        
+                        <h6><i class="fas fa-building me-2 text-primary"></i>Visit CNI Office</h6>
+                        <p class="text-muted">Go to any CNI office with your required documents to complete pre-registration and receive your enrollment code.</p>
+                        
+                        <h6><i class="fas fa-phone me-2 text-primary"></i>Call CNI Hotline</h6>
+                        <p class="text-muted">Call the CNI customer service hotline for assistance with pre-registration and enrollment code generation.</p>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Important:</strong> You must complete pre-registration before visiting the office to avoid long wait times.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Messages -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="errorToast" class="toast" role="alert">
+        <div class="toast-header bg-danger text-white">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <strong class="me-auto">Error</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="errorMessage"></div>
+    </div>
+</div>
+
+<script>
+// Auto-uppercase enrollment code input
+document.getElementById('enrollmentCode').addEventListener('input', function(e) {
+    e.target.value = e.target.value.toUpperCase();
+});
+
+// Handle form submission
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const enrollmentCode = document.getElementById('enrollmentCode').value.trim();
+    const loginBtn = document.getElementById('loginBtn');
+    
+    if (!enrollmentCode) {
+        showError('Please enter your enrollment code');
+        return;
+    }
+    
+    // Disable button and show loading
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Logging in...';
+    
+    fetch('/user/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            enrollment_code: enrollmentCode
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = data.redirect;
+        } else {
+            showError(data.message || 'Login failed');
+            resetLoginButton();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showError('Network error occurred. Please try again.');
+        resetLoginButton();
+    });
+});
+
+function resetLoginButton() {
+    const loginBtn = document.getElementById('loginBtn');
+    loginBtn.disabled = false;
+    loginBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Login';
+}
+
+function showError(message) {
+    const errorToast = document.getElementById('errorToast');
+    const errorMessage = document.getElementById('errorMessage');
+    errorMessage.textContent = message;
+    
+    const bsToast = new bootstrap.Toast(errorToast);
+    bsToast.show();
+}
+
+function showEnrollmentInfo() {
+    const modal = new bootstrap.Modal(document.getElementById('enrollmentModal'));
+    modal.show();
+}
+
+function fillCode(code) {
+    document.getElementById('enrollmentCode').value = code;
+}
+
+function toggleTestCodes() {
+    const testCodes = document.getElementById('testCodes');
+    if (testCodes.style.display === 'none') {
+        testCodes.style.display = 'block';
+    } else {
+        testCodes.style.display = 'none';
+    }
+}
+
+// Show test codes in development mode
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    setTimeout(() => {
+        document.getElementById('testCodes').style.display = 'block';
+    }, 1000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}User Dashboard - CNI Queue Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Welcome Section -->
+        <div class="col-12 mb-4">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-circle me-2"></i>
+                        Welcome, {{ citizen.first_name }} {{ citizen.last_name }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Enrollment Code:</strong> {{ citizen.pre_enrollment_code }}</p>
+                            <p class="mb-1"><strong>Phone:</strong> {{ citizen.phone_number }}</p>
+                            <p class="mb-0"><strong>Email:</strong> {{ citizen.email }}</p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <a href="{{ url_for('user.logout') }}" class="btn btn-outline-danger">
+                                <i class="fas fa-sign-out-alt me-1"></i>Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Ticket Section -->
+        <div class="col-lg-8 mb-4">
+            {% if active_ticket %}
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-ticket-alt me-2"></i>
+                        Active Ticket
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h2 class="text-primary mb-1">{{ active_ticket.ticket_number }}</h2>
+                                <p class="text-muted mb-0">Ticket Number</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h3 class="text-info mb-1">{{ queue_position or 'N/A' }}</h3>
+                                <p class="text-muted mb-0">Position in Queue</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h3 class="text-warning mb-1">{{ estimated_wait or 'N/A' }} min</h3>
+                                <p class="text-muted mb-0">Estimated Wait</p>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Service:</strong> {{ active_ticket.service_type.name_en }}</p>
+                            <p class="mb-1"><strong>Status:</strong> 
+                                <span class="badge bg-warning text-dark">{{ active_ticket.status.title() }}</span>
+                            </p>
+                            <p class="mb-0"><strong>Created:</strong> {{ active_ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <button class="btn btn-outline-danger" onclick="cancelTicket('{{ active_ticket.ticket_number }}')">
+                                <i class="fas fa-times me-1"></i>Cancel Ticket
+                            </button>
+                            <button class="btn btn-info ms-2" onclick="refreshStatus()">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-plus-circle me-2"></i>
+                        Request New Ticket
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted mb-3">You don't have any active tickets. Request a new ticket to join the queue.</p>
+                    <a href="{{ url_for('user.services') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-ticket-alt me-2"></i>Request Ticket
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Queue Statistics -->
+        <div class="col-lg-4 mb-4">
+            <div class="card border-secondary">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Queue Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h3 class="text-primary">{{ total_waiting }}</h3>
+                        <p class="text-muted mb-0">People Waiting</p>
+                    </div>
+                    <hr>
+                    <div class="d-grid">
+                        <button class="btn btn-outline-primary" onclick="refreshStats()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh Stats
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ticket History -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Ticket History
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if ticket_history %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Ticket Number</th>
+                                    <th>Service</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Completed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ticket in ticket_history %}
+                                <tr>
+                                    <td><strong>{{ ticket.ticket_number }}</strong></td>
+                                    <td>{{ ticket.service_type.name_en }}</td>
+                                    <td>
+                                        {% if ticket.status == 'completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% elif ticket.status == 'waiting' %}
+                                            <span class="badge bg-warning text-dark">Waiting</span>
+                                        {% elif ticket.status == 'in_progress' %}
+                                            <span class="badge bg-info">In Progress</span>
+                                        {% elif ticket.status == 'cancelled' %}
+                                            <span class="badge bg-danger">Cancelled</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ ticket.status.title() }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        {% if ticket.completed_at %}
+                                            {{ ticket.completed_at.strftime('%Y-%m-%d %H:%M') }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>No ticket history found.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Messages -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="successToast" class="toast" role="alert">
+        <div class="toast-header bg-success text-white">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong class="me-auto">Success</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="successMessage"></div>
+    </div>
+    
+    <div id="errorToast" class="toast" role="alert">
+        <div class="toast-header bg-danger text-white">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <strong class="me-auto">Error</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="errorMessage"></div>
+    </div>
+</div>
+
+<script>
+function showToast(type, message) {
+    const toast = document.getElementById(type + 'Toast');
+    const messageElement = document.getElementById(type + 'Message');
+    messageElement.textContent = message;
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+}
+
+function cancelTicket(ticketNumber) {
+    if (!confirm('Are you sure you want to cancel this ticket?')) {
+        return;
+    }
+    
+    fetch(`/user/cancel-ticket/${ticketNumber}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('success', 'Ticket cancelled successfully');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            showToast('error', data.message || 'Error cancelling ticket');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('error', 'Network error occurred');
+    });
+}
+
+function refreshStatus() {
+    window.location.reload();
+}
+
+function refreshStats() {
+    window.location.reload();
+}
+
+// Auto-refresh every 30 seconds if there's an active ticket
+{% if active_ticket %}
+setInterval(() => {
+    fetch(`/user/ticket-status/{{ active_ticket.ticket_number }}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.ticket.status !== 'waiting') {
+            // Status changed, reload page
+            window.location.reload();
+        }
+    })
+    .catch(error => console.error('Auto-refresh error:', error));
+}, 30000);
+{% endif %}
+</script>
+{% endblock %}

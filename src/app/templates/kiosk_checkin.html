@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px 0;
+        }
+        
+        .kiosk-header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 0;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .back-btn, .home-btn {
+            background: #95a5a6;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 20px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover, .home-btn:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+        }
+        
+        .checkin-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .checkin-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        
+        .service-info {
+            background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 40px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .service-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .service-duration {
+            color: #667eea;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .form-section {
+            margin-bottom: 40px;
+        }
+        
+        .form-title {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        .form-description {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .code-input-group {
+            max-width: 400px;
+            margin: 0 auto 30px;
+        }
+        
+        .code-input {
+            font-size: 1.5rem;
+            padding: 20px;
+            text-align: center;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        
+        .code-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            background: white;
+            outline: none;
+        }
+        
+        .code-input.error {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.05);
+        }
+        
+        .input-help {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-top: 10px;
+        }
+        
+        .virtual-keyboard {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            max-width: 300px;
+            margin: 0 auto 30px;
+        }
+        
+        .key-btn {
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #2c3e50;
+        }
+        
+        .key-btn:hover {
+            background: linear-gradient(145deg, #667eea, #764ba2);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .key-btn.special {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            color: white;
+            grid-column: span 2;
+        }
+        
+        .key-btn.special:hover {
+            background: linear-gradient(145deg, #c0392b, #a93226);
+        }
+        
+        .submit-section {
+            margin-top: 40px;
+        }
+        
+        .submit-btn {
+            background: linear-gradient(145deg, #27ae60, #2ecc71);
+            border: none;
+            border-radius: 50px;
+            padding: 20px 50px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(39, 174, 96, 0.3);
+            min-width: 250px;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        
+        .submit-btn.enabled {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .submit-btn.enabled:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(39, 174, 96, 0.4);
+            background: linear-gradient(145deg, #2ecc71, #27ae60);
+        }
+        
+        .error-message {
+            background: rgba(231, 76, 60, 0.1);
+            border: 2px solid #e74c3c;
+            border-radius: 10px;
+            padding: 15px;
+            color: #e74c3c;
+            font-weight: 600;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .success-message {
+            background: rgba(39, 174, 96, 0.1);
+            border: 2px solid #27ae60;
+            border-radius: 10px;
+            padding: 15px;
+            color: #27ae60;
+            font-weight: 600;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .loading-spinner {
+            font-size: 3rem;
+            color: #667eea;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .checkin-card {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .virtual-keyboard {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+            
+            .key-btn {
+                padding: 12px;
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="text-center">
+            <i class="fas fa-spinner loading-spinner"></i>
+            <div class="mt-3">
+                <h4 id="loading-text">
+                    {% if language == 'fr' %}Traitement en cours...{% else %}Processing...{% endif %}
+                </h4>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container-fluid">
+        <div class="kiosk-header">
+            <div class="header-content">
+                <h1 class="header-title">
+                    <i class="fas fa-sign-in-alt me-3"></i>
+                    {% if language == 'fr' %}
+                        Enregistrement
+                    {% else %}
+                        Check-in
+                    {% endif %}
+                </h1>
+                <div class="header-actions">
+                    <button class="back-btn" onclick="goBack()">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        {% if language == 'fr' %}Retour{% else %}Back{% endif %}
+                    </button>
+                    <button class="home-btn" onclick="goHome()">
+                        <i class="fas fa-home me-2"></i>
+                        {% if language == 'fr' %}Accueil{% else %}Home{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="checkin-container">
+            <div class="checkin-card">
+                <div class="service-info">
+                    <div class="service-name">{{ service.name }}</div>
+                    <div class="service-duration">
+                        <i class="fas fa-clock me-2"></i>
+                        {% if language == 'fr' %}
+                            Durée estimée: {{ service.estimated_duration }} minutes
+                        {% else %}
+                            Estimated duration: {{ service.estimated_duration }} minutes
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h2 class="form-title">
+                        {% if language == 'fr' %}
+                            Entrez votre code de pré-inscription
+                        {% else %}
+                            Enter your pre-enrollment code
+                        {% endif %}
+                    </h2>
+                    <p class="form-description">
+                        {% if language == 'fr' %}
+                            Veuillez saisir le code de pré-inscription que vous avez reçu lors de votre demande en ligne.
+                        {% else %}
+                            Please enter the pre-enrollment code you received during your online application.
+                        {% endif %}
+                    </p>
+                    
+                    <div class="code-input-group">
+                        <input type="text" 
+                               class="form-control code-input" 
+                               id="pre-enrollment-code" 
+                               placeholder="{% if language == 'fr' %}PE-20250102-123456{% else %}PE-20250102-123456{% endif %}"
+                               maxlength="20"
+                               autocomplete="off">
+                        <div class="input-help">
+                            {% if language == 'fr' %}
+                                Format: PE-AAAAMMJJ-XXXXXX (lettres et chiffres)
+                            {% else %}
+                                Format: PE-YYYYMMDD-XXXXXX (letters and numbers)
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="virtual-keyboard">
+                        <button class="key-btn" onclick="addToCode('1')">1</button>
+                        <button class="key-btn" onclick="addToCode('2')">2</button>
+                        <button class="key-btn" onclick="addToCode('3')">3</button>
+                        <button class="key-btn" onclick="addToCode('4')">4</button>
+                        <button class="key-btn" onclick="addToCode('5')">5</button>
+                        <button class="key-btn" onclick="addToCode('6')">6</button>
+                        <button class="key-btn" onclick="addToCode('7')">7</button>
+                        <button class="key-btn" onclick="addToCode('8')">8</button>
+                        <button class="key-btn" onclick="addToCode('9')">9</button>
+                        <button class="key-btn" onclick="addToCode('0')">0</button>
+                        <button class="key-btn" onclick="addToCode('-')">-</button>
+                        <button class="key-btn special" onclick="clearCode()">
+                            <i class="fas fa-backspace"></i>
+                            {% if language == 'fr' %}Effacer{% else %}Clear{% endif %}
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="submit-section">
+                    <button class="submit-btn" id="submit-btn" onclick="submitCheckin()">
+                        <i class="fas fa-ticket-alt me-2"></i>
+                        {% if language == 'fr' %}Générer mon ticket{% else %}Generate my ticket{% endif %}
+                    </button>
+                    
+                    <div class="error-message" id="error-message"></div>
+                    <div class="success-message" id="success-message"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const serviceId = {{ service.id }};
+        const language = '{{ language }}';
+        
+        const messages = {
+            fr: {
+                codeRequired: 'Veuillez entrer votre code de pré-inscription',
+                invalidCode: 'Code invalide. Veuillez vérifier et réessayer.',
+                processing: 'Traitement en cours...',
+                ticketGenerated: 'Ticket généré avec succès!',
+                systemError: 'Erreur système. Veuillez réessayer.',
+                existingTicket: 'Vous avez déjà un ticket actif'
+            },
+            en: {
+                codeRequired: 'Please enter your pre-enrollment code',
+                invalidCode: 'Invalid code. Please check and try again.',
+                processing: 'Processing...',
+                ticketGenerated: 'Ticket generated successfully!',
+                systemError: 'System error. Please try again.',
+                existingTicket: 'You already have an active ticket'
+            }
+        };
+        
+        const codeInput = document.getElementById('pre-enrollment-code');
+        const submitBtn = document.getElementById('submit-btn');
+        const errorMessage = document.getElementById('error-message');
+        const successMessage = document.getElementById('success-message');
+        
+        // Input validation
+        codeInput.addEventListener('input', function() {
+            const code = this.value.trim();
+            
+            // Enable/disable submit button
+            if (code.length >= 6) {
+                submitBtn.classList.add('enabled');
+            } else {
+                submitBtn.classList.remove('enabled');
+            }
+            
+            // Clear error state
+            this.classList.remove('error');
+            hideMessages();
+        });
+        
+        // Enter key handling
+        codeInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && this.value.trim().length >= 6) {
+                submitCheckin();
+            }
+        });
+        
+        function addToCode(char) {
+            const currentValue = codeInput.value;
+            if (currentValue.length < 20) {
+                codeInput.value = currentValue + char;
+                codeInput.dispatchEvent(new Event('input'));
+            }
+        }
+        
+        function clearCode() {
+            codeInput.value = '';
+            codeInput.dispatchEvent(new Event('input'));
+            codeInput.focus();
+        }
+        
+        function submitCheckin() {
+            const code = codeInput.value.trim();
+            
+            if (!code) {
+                showError(messages[language].codeRequired);
+                return;
+            }
+            
+            if (code.length < 6) {
+                showError(messages[language].invalidCode);
+                return;
+            }
+            
+            showLoading();
+            hideMessages();
+            
+            // Submit check-in request
+            fetch('/kiosk/process-checkin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    pre_enrollment_code: code,
+                    service_type_id: serviceId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                
+                if (data.success) {
+                    showSuccess(data.message);
+                    
+                    // If user already has a ticket, redirect immediately
+                    if (data.redirect_to_ticket) {
+                        window.location.href = `/kiosk/ticket/${data.ticket_number}`;
+                    } else {
+                        // Redirect to ticket page after 2 seconds for new tickets
+                        setTimeout(() => {
+                            window.location.href = `/kiosk/ticket/${data.ticket_number}`;
+                        }, 2000);
+                    }
+                } else {
+                    showError(data.message);
+                    codeInput.classList.add('error');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                showError(messages[language].systemError);
+            });
+        }
+        
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+        }
+        
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+        
+        function hideMessages() {
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+        }
+        
+        function showLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+        
+        function goBack() {
+            showLoading();
+            setTimeout(() => {
+                window.history.back();
+            }, 500);
+        }
+        
+        function goHome() {
+            showLoading();
+            setTimeout(() => {
+                window.location.href = '/kiosk/welcome';
+            }, 500);
+        }
+        
+        // Auto-focus on code input
+        codeInput.focus();
+        
+        // Prevent right-click and F12 for kiosk mode
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

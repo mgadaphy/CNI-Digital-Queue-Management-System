@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block header %}
+<div class="admin-header bg-light border-bottom">
+    <div class="container-fluid">
+        <nav class="navbar navbar-expand-lg navbar-light">
+            <div class="container-fluid px-0">
+                <div class="navbar-nav">
+                    <a class="nav-link" href="{{ url_for('admin.admin_dashboard') }}"><i class="fas fa-tachometer-alt me-1"></i>Dashboard</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_agents') }}"><i class="fas fa-users me-1"></i>Agents</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_service_types') }}"><i class="fas fa-cogs me-1"></i>Service Types</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_stations') }}"><i class="fas fa-desktop me-1"></i>Stations</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_citizens') }}"><i class="fas fa-user-friends me-1"></i>Citizens</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_queue') }}"><i class="fas fa-list-ol me-1"></i>Queue</a>
+                    <a class="nav-link" href="{{ url_for('admin.system_reports') }}"><i class="fas fa-chart-bar me-1"></i>Reports</a>
+                </div>
+                <div class="navbar-nav ms-auto">
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i>
+                            {% if current_user %}
+                                {{ current_user.first_name }} {{ current_user.last_name }}
+                            {% else %}
+                                Admin User
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('admin.admin_profile') }}"><i class="fas fa-user me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item active" href="{{ url_for('admin.admin_settings') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}" onclick="handleLogout(event)"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-cog me-2"></i>Admin Settings</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- System Settings -->
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-server me-2"></i>System Settings</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Queue Auto-Refresh Interval</label>
+                                        <select class="form-select" id="refreshInterval">
+                                            <option value="5">5 seconds</option>
+                                            <option value="10" selected>10 seconds</option>
+                                            <option value="15">15 seconds</option>
+                                            <option value="30">30 seconds</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Default Service Time (minutes)</label>
+                                        <input type="number" class="form-control" id="defaultServiceTime" value="15" min="1" max="120">
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="enableNotifications" checked>
+                                            <label class="form-check-label" for="enableNotifications">
+                                                Enable System Notifications
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="enableSounds" checked>
+                                            <label class="form-check-label" for="enableSounds">
+                                                Enable Sound Alerts
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Queue Management Settings -->
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-list-ol me-2"></i>Queue Management</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Maximum Queue Length</label>
+                                        <input type="number" class="form-control" id="maxQueueLength" value="100" min="10" max="500">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">No-Show Timeout (minutes)</label>
+                                        <input type="number" class="form-control" id="noShowTimeout" value="10" min="1" max="60">
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="allowWalkIns" checked>
+                                            <label class="form-check-label" for="allowWalkIns">
+                                                Allow Walk-in Customers
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="enablePriority">
+                                            <label class="form-check-label" for="enablePriority">
+                                                Enable Priority Queue
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Display Settings -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-desktop me-2"></i>Display Settings</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Theme</label>
+                                        <select class="form-select" id="theme">
+                                            <option value="light" selected>Light</option>
+                                            <option value="dark">Dark</option>
+                                            <option value="auto">Auto (System)</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Language</label>
+                                        <select class="form-select" id="language">
+                                            <option value="en" selected>English</option>
+                                            <option value="fr">French</option>
+                                            <option value="es">Spanish</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Items per Page</label>
+                                        <select class="form-select" id="itemsPerPage">
+                                            <option value="10">10</option>
+                                            <option value="25" selected>25</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Security Settings -->
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-shield-alt me-2"></i>Security Settings</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Session Timeout (minutes)</label>
+                                        <input type="number" class="form-control" id="sessionTimeout" value="60" min="15" max="480">
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="requirePasswordChange">
+                                            <label class="form-check-label" for="requirePasswordChange">
+                                                Require Password Change Every 90 Days
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="enableTwoFactor">
+                                            <label class="form-check-label" for="enableTwoFactor">
+                                                Enable Two-Factor Authentication
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="logUserActivity" checked>
+                                            <label class="form-check-label" for="logUserActivity">
+                                                Log User Activity
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-secondary me-2" onclick="resetSettings()">
+                                <i class="fas fa-undo me-1"></i>Reset to Defaults
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="saveSettings()">
+                                <i class="fas fa-save me-1"></i>Save Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function saveSettings() {
+    // Collect all settings
+    const settings = {
+        refreshInterval: document.getElementById('refreshInterval').value,
+        defaultServiceTime: document.getElementById('defaultServiceTime').value,
+        enableNotifications: document.getElementById('enableNotifications').checked,
+        enableSounds: document.getElementById('enableSounds').checked,
+        maxQueueLength: document.getElementById('maxQueueLength').value,
+        noShowTimeout: document.getElementById('noShowTimeout').value,
+        allowWalkIns: document.getElementById('allowWalkIns').checked,
+        enablePriority: document.getElementById('enablePriority').checked,
+        theme: document.getElementById('theme').value,
+        language: document.getElementById('language').value,
+        itemsPerPage: document.getElementById('itemsPerPage').value,
+        sessionTimeout: document.getElementById('sessionTimeout').value,
+        requirePasswordChange: document.getElementById('requirePasswordChange').checked,
+        enableTwoFactor: document.getElementById('enableTwoFactor').checked,
+        logUserActivity: document.getElementById('logUserActivity').checked
+    };
+    
+    // Save to localStorage for now (in a real app, this would be saved to the server)
+    localStorage.setItem('adminSettings', JSON.stringify(settings));
+    
+    // Show success message
+    showAlert('Settings saved successfully!', 'success');
+}
+
+function resetSettings() {
+    if (confirm('Are you sure you want to reset all settings to their default values?')) {
+        // Reset all form elements to their default values
+        document.getElementById('refreshInterval').value = '10';
+        document.getElementById('defaultServiceTime').value = '15';
+        document.getElementById('enableNotifications').checked = true;
+        document.getElementById('enableSounds').checked = true;
+        document.getElementById('maxQueueLength').value = '100';
+        document.getElementById('noShowTimeout').value = '10';
+        document.getElementById('allowWalkIns').checked = true;
+        document.getElementById('enablePriority').checked = false;
+        document.getElementById('theme').value = 'light';
+        document.getElementById('language').value = 'en';
+        document.getElementById('itemsPerPage').value = '25';
+        document.getElementById('sessionTimeout').value = '60';
+        document.getElementById('requirePasswordChange').checked = false;
+        document.getElementById('enableTwoFactor').checked = false;
+        document.getElementById('logUserActivity').checked = true;
+        
+        showAlert('Settings reset to defaults', 'info');
+    }
+}
+
+function showAlert(message, type) {
+    // Create alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto-dismiss after 3 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 3000);
+}
+
+// Load saved settings on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const savedSettings = localStorage.getItem('adminSettings');
+    if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        
+        // Apply saved settings to form elements
+        Object.keys(settings).forEach(key => {
+            const element = document.getElementById(key);
+            if (element) {
+                if (element.type === 'checkbox') {
+                    element.checked = settings[key];
+                } else {
+                    element.value = settings[key];
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

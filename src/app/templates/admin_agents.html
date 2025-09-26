@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Admin Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+        <div class="container-fluid">
+            <span class="navbar-brand">Admin Panel</span>
+            <div class="navbar-nav">
+                <a class="nav-link" href="{{ url_for('admin.admin_dashboard') }}">Dashboard</a>
+                <a class="nav-link active" href="{{ url_for('admin.manage_agents') }}">Agents</a>
+                <a class="nav-link" href="{{ url_for('admin.manage_service_types') }}">Service Types</a>
+                <a class="nav-link" href="{{ url_for('admin.manage_stations') }}">Stations</a>
+                <a class="nav-link" href="{{ url_for('admin.manage_citizens') }}">Citizens</a>
+                <a class="nav-link" href="{{ url_for('admin.manage_queue') }}">Queue</a>
+                <a class="nav-link" href="{{ url_for('admin.system_reports') }}">Reports</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Manage Agents</h1>
+                <a href="{{ url_for('admin.create_agent') }}" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Add New Agent
+                </a>
+            </div>
+            
+            <!-- Agents Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h5>All Agents</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="agentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Employee ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Department</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for agent in agents %}
+                                <tr>
+                                    <td>{{ agent.employee_id }}</td>
+                                    <td>{{ agent.name }}</td>
+                                    <td>{{ agent.email }}</td>
+                                    <td>{{ agent.phone or 'N/A' }}</td>
+                                    <td>{{ agent.department or 'N/A' }}</td>
+                                    <td>
+                                        <span class="badge badge-{{ 'success' if agent.is_active else 'dark' }}">
+                                            {{ 'Active' if agent.is_active else 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ agent.created_at.strftime('%Y-%m-%d') if agent.created_at else 'N/A' }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('admin.edit_agent', agent_id=agent.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    onclick="deleteAgent({{ agent.id }}, '{{ agent.name }}')">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete agent <strong id="agentName"></strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<script>
+let agentToDelete = null;
+
+function deleteAgent(agentId, agentName) {
+    agentToDelete = agentId;
+    document.getElementById('agentName').textContent = agentName;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+document.getElementById('confirmDelete').addEventListener('click', function() {
+    if (agentToDelete) {
+        fetch(`/admin/agents/${agentToDelete}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while deleting the agent.');
+        });
+        
+        bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+    }
+});
+</script>
+{% endblock %}

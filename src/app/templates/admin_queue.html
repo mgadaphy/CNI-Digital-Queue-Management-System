@@ -1,0 +1,1119 @@
+{% extends "base.html" %}
+
+{% block header %}
+<div class="admin-header bg-light border-bottom">
+    <div class="container-fluid">
+        <nav class="navbar navbar-expand-lg navbar-light">
+            <div class="container-fluid px-0">
+                <div class="navbar-nav">
+                    <a class="nav-link" href="{{ url_for('admin.admin_dashboard') }}"><i class="fas fa-tachometer-alt me-1"></i>Dashboard</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_agents') }}"><i class="fas fa-users me-1"></i>Agents</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_service_types') }}"><i class="fas fa-cogs me-1"></i>Service Types</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_stations') }}"><i class="fas fa-desktop me-1"></i>Stations</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_citizens') }}"><i class="fas fa-user-friends me-1"></i>Citizens</a>
+                    <a class="nav-link active" href="{{ url_for('admin.manage_queue') }}"><i class="fas fa-list-ol me-1"></i>Queue</a>
+                    <a class="nav-link" href="{{ url_for('admin.system_reports') }}"><i class="fas fa-chart-bar me-1"></i>Reports</a>
+                </div>
+                <div class="navbar-nav ms-auto">
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i>
+                            {% if current_user %}
+                                {{ current_user.first_name }} {{ current_user.last_name }}
+                            {% else %}
+                                Admin User
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('admin.admin_profile') }}"><i class="fas fa-user me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.admin_settings') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}" onclick="handleLogout(event)"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<script>
+// Define functions before HTML elements that use them
+async function refreshQueueData(page = 1, perPage = 50, statusFilter = '') {
+    try {
+        const params = new URLSearchParams({
+            page: page,
+            per_page: perPage
+        });
+        
+        if (statusFilter) {
+            params.append('status', statusFilter);
+        }
+        
+        const response = await fetch(`/admin/api/refresh_tickets?${params}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.tickets) {
+            updateQueueTable(result.tickets);
+            updateQueueStats(result.tickets);
+            updatePaginationControls(result.pagination);
+        } else {
+            showErrorMessage(result.error || 'Failed to refresh queue data');
+        }
+    } catch (error) {
+        console.error('Error fetching queue data:', error);
+        showErrorMessage('Unable to refresh queue data. Please check your connection and try again.');
+    }
+}
+
+async function optimizeQueue() {
+    if (confirm('This will reorder the queue based on current priorities. Continue?')) {
+        try {
+            const response = await fetch('/admin/api/queue/optimize', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification('Queue optimized successfully!', 'success');
+                await refreshQueueData();
+            } else {
+                showNotification('Error: ' + result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('Error optimizing queue', 'error');
+        }
+    }
+}
+
+function showNotification(message, type) {
+    // Enhanced notification function with better UX
+    const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-danger' : 'alert-info';
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+function showErrorMessage(message) {
+    showNotification(message, 'error');
+}
+
+function showSuccessMessage(message) {
+    showNotification(message, 'success');
+}
+
+function showLoadingState(buttonId, isLoading) {
+    const button = document.getElementById(buttonId);
+    if (!button) return;
+    
+    if (isLoading) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+    } else {
+        button.disabled = false;
+        // Restore original button content - you may need to customize this per button
+        const originalContent = button.getAttribute('data-original-content');
+        if (originalContent) {
+            button.innerHTML = originalContent;
+        }
+    }
+}
+
+function showTicketDetailsModal(ticketData) {
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('ticketDetailsModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.id = 'ticketDetailsModal';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Ticket Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="ticketDetailsBody">
+                        <!-- Content will be populated here -->
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    // Populate modal content
+    const modalBody = document.getElementById('ticketDetailsBody');
+    modalBody.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Ticket Information</h6>
+                <p><strong>Ticket Number:</strong> ${ticketData.ticket_number}</p>
+                <p><strong>Status:</strong> <span class="badge bg-primary">${ticketData.status}</span></p>
+                <p><strong>Priority Score:</strong> ${ticketData.priority_score}</p>
+                <p><strong>Service Type:</strong> ${ticketData.service_type}</p>
+            </div>
+            <div class="col-md-6">
+                <h6>Citizen Information</h6>
+                <p><strong>Name:</strong> ${ticketData.citizen.name}</p>
+                <p><strong>Enrollment Code:</strong> ${ticketData.citizen.enrollment_code}</p>
+                ${ticketData.assigned_agent ? `
+                    <h6>Assigned Agent</h6>
+                    <p><strong>Agent:</strong> ${ticketData.assigned_agent.name}</p>
+                ` : '<p><em>No agent assigned</em></p>'}
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <h6>Timestamps</h6>
+                <p><strong>Created:</strong> ${new Date(ticketData.created_at).toLocaleString()}</p>
+                <p><strong>Updated:</strong> ${new Date(ticketData.updated_at).toLocaleString()}</p>
+            </div>
+        </div>
+    `;
+    
+    // Show modal
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+}
+
+function updateQueueTable(tickets) {
+    // Placeholder function
+    console.log('Updating queue table with', tickets.length, 'tickets');
+}
+
+function updateQueueStats(tickets) {
+    // Placeholder function
+    console.log('Updating queue stats');
+}
+
+function updatePaginationControls(pagination) {
+    // Placeholder function
+    console.log('Updating pagination controls');
+}
+
+// Additional functions referenced in onclick handlers
+async function viewDetails(ticketId) {
+    console.log('Viewing details for ticket:', ticketId);
+    
+    try {
+        showLoadingState(`viewDetailsBtn_${ticketId}`, true);
+        
+        const response = await fetch(`/admin/api/queue/${ticketId}/details`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const ticketData = await response.json();
+        showTicketDetailsModal(ticketData);
+        
+    } catch (error) {
+        console.error('Error fetching ticket details:', error);
+        showErrorMessage('Failed to load ticket details. Please try again.');
+    } finally {
+        showLoadingState(`viewDetailsBtn_${ticketId}`, false);
+    }
+}
+
+function filterQueue() {
+    const statusFilter = document.getElementById('statusFilter')?.value || '';
+    const searchInput = document.getElementById('searchInput')?.value || '';
+    const priorityFilter = document.getElementById('priorityFilter')?.value || '';
+    
+    console.log('Filtering queue with:', { statusFilter, searchInput, priorityFilter });
+    // Reset to first page when filtering
+    refreshQueueData(1, 50, statusFilter);
+}
+
+function clearFilters() {
+    const statusFilter = document.getElementById('statusFilter');
+    const searchInput = document.getElementById('searchInput');
+    const priorityFilter = document.getElementById('priorityFilter');
+    
+    if (statusFilter) statusFilter.value = '';
+    if (searchInput) searchInput.value = '';
+    if (priorityFilter) priorityFilter.value = '';
+    
+    // Reset to first page with no filters
+    refreshQueueData(1, 50, '');
+}
+
+function loadPage(page) {
+    console.log('Loading page:', page);
+    refreshQueueData(page, 50, document.getElementById('statusFilter')?.value || '');
+}
+
+async function callNext(entryId) {
+    console.log('Calling next for entry:', entryId);
+    
+    if (!confirm('Are you sure you want to call this ticket next?')) {
+        return;
+    }
+    
+    try {
+        showLoadingState(`callNextBtn_${entryId}`, true);
+        
+        const response = await fetch(`/admin/api/queue/${entryId}/call-next`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccessMessage(result.message);
+            await refreshQueueData(); // Refresh the queue display
+        } else {
+            showErrorMessage(result.message || 'Failed to call ticket');
+        }
+        
+    } catch (error) {
+        console.error('Error calling next ticket:', error);
+        showErrorMessage('Error calling ticket. Please try again.');
+    } finally {
+        showLoadingState(`callNextBtn_${entryId}`, false);
+    }
+}
+
+async function updatePriority(entryId) {
+    console.log('Updating priority for entry:', entryId);
+    
+    const newPriority = prompt('Enter new priority (0-100):');
+    if (newPriority === null) return; // User cancelled
+    
+    const priority = parseFloat(newPriority);
+    if (isNaN(priority) || priority < 0 || priority > 100) {
+        showErrorMessage('Please enter a valid priority between 0 and 100');
+        return;
+    }
+    
+    try {
+        showLoadingState(`updatePriorityBtn_${entryId}`, true);
+        
+        const response = await fetch(`/admin/api/queue/${entryId}/update-priority`, {
+            method: 'PUT',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ priority: priority })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccessMessage(result.message);
+            await refreshQueueData(); // Refresh the queue display
+        } else {
+            showErrorMessage(result.message || 'Failed to update priority');
+        }
+        
+    } catch (error) {
+        console.error('Error updating priority:', error);
+        showErrorMessage('Error updating priority. Please try again.');
+    } finally {
+        showLoadingState(`updatePriorityBtn_${entryId}`, false);
+    }
+}
+
+async function cancelEntry(entryId) {
+    const reason = prompt('Enter cancellation reason (optional):');
+    if (reason === null) return; // User cancelled
+    
+    if (!confirm('Are you sure you want to cancel this entry?')) {
+        return;
+    }
+    
+    try {
+        showLoadingState(`cancelBtn_${entryId}`, true);
+        
+        const response = await fetch(`/admin/api/queue/${entryId}/cancel`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ reason: reason })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccessMessage(result.message);
+            await refreshQueueData(); // Refresh the queue display
+        } else {
+            showErrorMessage(result.message || 'Failed to cancel entry');
+        }
+        
+    } catch (error) {
+        console.error('Error cancelling entry:', error);
+        showErrorMessage('Error cancelling entry. Please try again.');
+    } finally {
+        showLoadingState(`cancelBtn_${entryId}`, false);
+    }
+}
+</script>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Queue Management</h3>
+                    <div>
+                        <button class="btn btn-primary" onclick="refreshQueueData()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button class="btn btn-success" onclick="optimizeQueue()">
+                            <i class="fas fa-magic"></i> Optimize Queue
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Queue Statistics -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body text-center">
+                                    <h4 id="waitingCount">{{ queue_stats.waiting if queue_stats else 0 }}</h4>
+                                    <p class="mb-0">Waiting</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h4 id="inProgressCount">{{ queue_stats.in_progress if queue_stats else 0 }}</h4>
+                                    <p class="mb-0">In Progress</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h4 id="completedCount">{{ queue_stats.completed_today if queue_stats else 0 }}</h4>
+                                    <p class="mb-0">Completed Today</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-secondary text-white">
+                                <div class="card-body text-center">
+                                    <h4 id="totalCount">{{ queue_stats.total if queue_stats else 0 }}</h4>
+                                    <p class="mb-0">Total Entries</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Filter Controls -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <select class="form-select" id="statusFilter" onchange="filterQueue()">
+                                <option value="">All Statuses</option>
+                                <option value="waiting">Waiting</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control" id="searchInput" placeholder="Search by citizen name or ID" onkeyup="filterQueue()">
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="priorityFilter" onchange="filterQueue()">
+                                <option value="">All Priorities</option>
+                                <option value="high">High Priority</option>
+                                <option value="normal">Normal Priority</option>
+                                <option value="low">Low Priority</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                                <i class="fas fa-times"></i> Clear Filters
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Queue Table -->
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="queueTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Queue #</th>
+                                    <th>Citizen</th>
+                                    <th>Service Type</th>
+                                    <th>Priority Score</th>
+                                    <th>Status</th>
+                                    <th>Wait Time</th>
+                                    <th>Agent</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in queue_entries %}
+                                <tr data-status="{{ entry.status }}" data-priority="{{ 'high' if entry.priority_score > 80 else 'normal' if entry.priority_score > 40 else 'low' }}">
+                                    <td><strong>#{{ entry.queue_number or entry.id }}</strong></td>
+                                    <td>
+                                        {% if entry.citizen %}
+                                            {{ entry.citizen.first_name }} {{ entry.citizen.last_name }}
+                                            <br><small class="text-muted">ID: {{ entry.citizen.id_number or 'N/A' }}</small>
+                                        {% else %}
+                                            <span class="text-muted">Unknown Citizen</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if entry.service_type %}
+                                            {{ entry.service_type.name_en or entry.service_type.name_fr }}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'danger' if entry.priority_score > 80 else 'warning' if entry.priority_score > 40 else 'dark' }}">
+                                            {{ entry.priority_score or 0 }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'warning' if entry.status == 'waiting' else 'info' if entry.status == 'in_progress' else 'success' if entry.status == 'completed' else 'dark' }}">
+                                            {{ entry.status.title() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if entry.status == 'waiting' %}
+                                            <span class="text-warning">
+                                                {{ ((entry.created_at.timestamp() - entry.created_at.timestamp()) / 60) | round(0) }} min
+                                            </span>
+                                        {% elif entry.wait_time %}
+                                            {{ entry.wait_time }} min
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if entry.agent %}
+                                            {{ entry.agent.first_name }} {{ entry.agent.last_name }}
+                                        {% else %}
+                                            <span class="text-muted">Unassigned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            {% if entry.status == 'waiting' %}
+                                                <button class="btn btn-outline-primary btn-sm" onclick="callNext({{ entry.id }})" title="Call Next">
+                                                    <i class="fas fa-play"></i> Call
+                                                </button>
+                                                <button class="btn btn-outline-warning btn-sm" onclick="updatePriority({{ entry.id }})" title="Update Priority">
+                                                    <i class="fas fa-exclamation"></i> Priority
+                                                </button>
+                                            {% endif %}
+                                            {% if entry.status in ['waiting', 'in_progress'] %}
+                                                <button class="btn btn-outline-danger btn-sm" onclick="cancelEntry({{ entry.id }})" title="Cancel">
+                                                    <i class="fas fa-times"></i> Cancel
+                                                </button>
+                                            {% endif %}
+                                            <button class="btn btn-outline-info btn-sm" onclick="viewDetails({{ entry.id }})" title="View Details">
+                                                <i class="fas fa-eye"></i> Details
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination Controls -->
+                    {% if pagination and pagination.pages > 1 %}
+                    <nav aria-label="Queue pagination" class="mt-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <p class="text-muted mb-0">
+                                    Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }} to 
+                                    {{ pagination.page * pagination.per_page if pagination.page * pagination.per_page < pagination.total else pagination.total }} 
+                                    of {{ pagination.total }} entries
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="pagination justify-content-end mb-0">
+                                    <li class="page-item {{ 'disabled' if not pagination.has_prev else '' }}">
+                                        <a class="page-link" href="{{ url_for('admin.manage_queue', page=pagination.prev_num, status=current_status_filter) if pagination.has_prev else '#' }}" 
+                                           onclick="loadPage({{ pagination.prev_num if pagination.has_prev else 1 }}); return false;">
+                                            <i class="fas fa-chevron-left"></i> Previous
+                                        </a>
+                                    </li>
+                                    
+                                    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                                        {% if page_num %}
+                                            {% if page_num != pagination.page %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="{{ url_for('admin.manage_queue', page=page_num, status=current_status_filter) }}"
+                                                       onclick="loadPage({{ page_num }}); return false;">{{ page_num }}</a>
+                                                </li>
+                                            {% else %}
+                                                <li class="page-item active">
+                                                    <span class="page-link">{{ page_num }}</span>
+                                                </li>
+                                            {% endif %}
+                                        {% else %}
+                                            <li class="page-item disabled">
+                                                <span class="page-link">...</span>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    <li class="page-item {{ 'disabled' if not pagination.has_next else '' }}">
+                                        <a class="page-link" href="{{ url_for('admin.manage_queue', page=pagination.next_num, status=current_status_filter) if pagination.has_next else '#' }}"
+                                           onclick="loadPage({{ pagination.next_num if pagination.has_next else pagination.pages }}); return false;">
+                                            Next <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </nav>
+                    {% endif %}
+                    
+                    {% if not queue_entries %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No queue entries found</h5>
+                        <p class="text-muted">Queue entries will appear here as citizens check in.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script>
+// Initialize Socket.IO connection
+const socket = io();
+
+// Real-time queue updates
+socket.on('queue_updated', function(data) {
+    console.log('Queue updated:', data.message);
+    refreshQueueData();
+});
+
+socket.on('agent_status_updated', function(data) {
+    console.log('Agent status updated:', data);
+    updateAgentStatus(data.agent_id, data.status);
+});
+
+socket.on('metrics_updated', function(data) {
+    console.log('Metrics updated:', data);
+    updateMetrics(data);
+});
+
+function updateAgentStatus(agentId, status) {
+    console.log('Updating agent status:', agentId, status);
+}
+
+function updateMetrics(data) {
+    console.log('Updating metrics:', data);
+}
+
+// Global pagination state
+let currentPage = 1;
+let currentPerPage = 50;
+let currentStatusFilter = '';
+
+// Helper functions for status and priority badges
+function getStatusBadge(status) {
+    const statusMap = {
+        'waiting': '<span class="badge bg-warning">Waiting</span>',
+        'in_progress': '<span class="badge bg-info">In Progress</span>',
+        'completed': '<span class="badge bg-success">Completed</span>',
+        'cancelled': '<span class="badge bg-dark">Cancelled</span>'
+    };
+    return statusMap[status] || '<span class="badge bg-secondary">Unknown</span>';
+}
+
+function getPriorityBadge(score) {
+    if (score > 80) return '<span class="badge bg-danger">High</span>';
+    if (score > 40) return '<span class="badge bg-warning">Normal</span>';
+    return '<span class="badge bg-dark">Low</span>';
+}
+
+function assignTicket(ticketId) {
+    console.log('Assigning ticket:', ticketId);
+    const assignBtn = document.querySelector(`[onclick*="assignTicket(${ticketId}"]`);
+    if (assignBtn) {
+        assignBtn.setAttribute('data-original-text', assignBtn.innerHTML);
+        showLoadingState(assignBtn, true);
+    }
+    
+    fetch(`/admin/api/assign_ticket/${ticketId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ agent_id: null })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showErrorMessage(data.message, 'success');
+            refreshQueueData();
+        } else {
+            const errorMsg = data.error_code ? `${data.message} (${data.error_code})` : data.message;
+            showErrorMessage(errorMsg, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Assignment error:', error);
+        showErrorMessage('Unable to assign ticket. Please check your connection and try again.', 'error');
+    })
+    .finally(() => {
+        if (assignBtn) {
+            showLoadingState(assignBtn, false);
+        }
+    });
+}
+
+function completeTicket(ticketId) {
+    const completeBtn = document.querySelector(`[onclick*="completeTicket(${ticketId}"]`);
+    if (completeBtn) {
+        completeBtn.setAttribute('data-original-text', completeBtn.innerHTML);
+        showLoadingState(completeBtn, true);
+    }
+    
+    fetch(`/admin/api/complete_ticket/${ticketId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showErrorMessage(data.message, 'success');
+            refreshQueueData();
+        } else {
+            const errorMsg = data.error_code ? `${data.message} (${data.error_code})` : data.message;
+            showErrorMessage(errorMsg, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Completion error:', error);
+        showErrorMessage('Unable to complete ticket. Please check your connection and try again.', 'error');
+    })
+    .finally(() => {
+        if (completeBtn) {
+            showLoadingState(completeBtn, false);
+        }
+    });
+}
+
+function transferTicket(ticketId, newAgentId) {
+    const transferBtn = document.querySelector(`[onclick*="transferTicket(${ticketId}"]`);
+    if (transferBtn) {
+        transferBtn.setAttribute('data-original-text', transferBtn.innerHTML);
+        showLoadingState(transferBtn, true);
+    }
+    
+    // TODO: Implement transfer_ticket endpoint
+    // fetch(`/admin/api/transfer_ticket/${ticketId}`, {
+    //     method: 'POST',
+    //     headers: {
+    //         'Content-Type': 'application/json',
+    //     },
+    //     body: JSON.stringify({ new_agent_id: newAgentId })
+    // })
+    // .then(response => {
+    //     if (!response.ok) {
+    //         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    //     }
+    //     return response.json();
+    // })
+    // .then(data => {
+    //     if (data.success) {
+    //         showErrorMessage(data.message, 'success');
+    //         refreshQueueData();
+    //     } else {
+    //         const errorMsg = data.error_code ? `${data.message} (${data.error_code})` : data.message;
+    //         showErrorMessage(errorMsg, 'error');
+    //     }
+    // })
+    // .catch(error => {
+    //     console.error('Transfer error:', error);
+    //     showErrorMessage('Unable to transfer ticket. Please check your connection and try again.', 'error');
+    // })
+    // .finally(() => {
+    //     if (transferBtn) {
+    //         showLoadingState(transferBtn, false);
+    //     }
+    // });
+    
+    showErrorMessage('Transfer ticket feature is not yet implemented.', 'warning');
+    if (transferBtn) {
+        showLoadingState(transferBtn, false);
+    }
+}
+
+function escalateTicket(ticketId, reason) {
+    const escalateBtn = document.querySelector(`[onclick*="escalateTicket(${ticketId}"]`);
+    if (escalateBtn) {
+        escalateBtn.setAttribute('data-original-text', escalateBtn.innerHTML);
+        showLoadingState(escalateBtn, true);
+    }
+    
+    // TODO: Implement escalate_ticket endpoint
+    // fetch(`/admin/api/escalate_ticket/${ticketId}`, {
+    //     method: 'POST',
+    //     headers: {
+    //         'Content-Type': 'application/json',
+    //     },
+    //     body: JSON.stringify({ reason: reason })
+    // })
+    // .then(response => {
+    //     if (!response.ok) {
+    //         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    //     }
+    //     return response.json();
+    // })
+    // .then(data => {
+    //     if (data.success) {
+    //         showErrorMessage(data.message, 'success');
+    //         refreshQueueData();
+    //     } else {
+    //         const errorMsg = data.error_code ? `${data.message} (${data.error_code})` : data.message;
+    //         showErrorMessage(errorMsg, 'error');
+    //     }
+    // })
+    // .catch(error => {
+    //     console.error('Escalate error:', error);
+    //     showErrorMessage('Unable to escalate ticket. Please check your connection and try again.', 'error');
+    // })
+    // .finally(() => {
+    //     if (escalateBtn) {
+    //         showLoadingState(escalateBtn, false);
+    //     }
+    // });
+    
+    showErrorMessage('Escalate ticket feature is not yet implemented.', 'warning');
+    if (escalateBtn) {
+        showLoadingState(escalateBtn, false);
+    }
+}
+
+function addTicketNote(ticketId, note) {
+    const noteBtn = document.querySelector(`[onclick*="addTicketNote(${ticketId}"]`);
+    if (noteBtn) {
+        noteBtn.setAttribute('data-original-text', noteBtn.innerHTML);
+        showLoadingState(noteBtn, true);
+    }
+    
+    fetch(`/admin/api/add_ticket_note/${ticketId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ note: note })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showErrorMessage(data.message, 'success');
+            refreshQueueData();
+        } else {
+            const errorMsg = data.error_code ? `${data.message} (${data.error_code})` : data.message;
+            showErrorMessage(errorMsg, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Note addition error:', error);
+        showErrorMessage('Unable to add note. Please check your connection and try again.', 'error');
+    })
+    .finally(() => {
+        if (noteBtn) {
+            showLoadingState(noteBtn, false);
+        }
+    });
+}
+
+function updateTicketPriority(ticketId, newPriority) {
+    const priorityBtn = document.querySelector(`[onclick*="updateTicketPriority(${ticketId}"]`);
+    if (priorityBtn) {
+        priorityBtn.setAttribute('data-original-text', priorityBtn.innerHTML);
+        showLoadingState(priorityBtn, true);
+    }
+    
+    fetch(`/admin/queue/${ticketId}/update-priority`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ priority_score: newPriority })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showErrorMessage(data.message, 'success');
+            refreshQueueData();
+        } else {
+            const errorMsg = data.error_code ? `${data.message} (${data.error_code})` : data.message;
+            showErrorMessage(errorMsg, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Priority update error:', error);
+        showErrorMessage('Unable to update priority. Please check your connection and try again.', 'error');
+    })
+    .finally(() => {
+        if (priorityBtn) {
+            showLoadingState(priorityBtn, false);
+        }
+    });
+}
+
+// Cleaned up - removed orphaned code fragments
+
+function getStatusBadge(status) {
+    const badges = {
+        'waiting': '<span class="badge bg-warning">Waiting</span>',
+        'in_progress': '<span class="badge bg-info">In Progress</span>',
+        'completed': '<span class="badge bg-success">Completed</span>',
+        'cancelled': '<span class="badge bg-danger">Cancelled</span>'
+    };
+    return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
+}
+
+function getPriorityBadge(priority) {
+    if (priority >= 80) return '<span class="badge bg-danger">High</span>';
+    if (priority >= 50) return '<span class="badge bg-warning">Medium</span>';
+    return '<span class="badge bg-success">Low</span>';
+}
+
+function updateQueueStats(tickets) {
+    const waitingCount = tickets.filter(t => t.status === 'waiting').length;
+    const inProgressCount = tickets.filter(t => t.status === 'in_progress').length;
+    const totalCount = tickets.length;
+    
+    // Update stats cards if they exist
+    const waitingElement = document.getElementById('waitingCount');
+    const inProgressElement = document.getElementById('inProgressCount');
+    const totalElement = document.getElementById('totalCount');
+    
+    if (waitingElement) waitingElement.textContent = waitingCount;
+    if (inProgressElement) inProgressElement.textContent = inProgressCount;
+    if (totalElement) totalElement.textContent = totalCount;
+}
+
+function updateAgentStatus(agentId, status) {
+    // Update agent status indicators if present
+    const agentElement = document.querySelector(`[data-agent-id="${agentId}"]`);
+    if (agentElement) {
+        agentElement.className = `badge bg-${getStatusColor(status)}`;
+        agentElement.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+    }
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'available': 'success',
+        'busy': 'warning',
+        'on_break': 'info',
+        'offline': 'secondary'
+    };
+    return colors[status] || 'secondary';
+}
+
+function updateMetrics(data) {
+    // Update performance metrics if dashboard elements exist
+    console.log('Updating metrics for agent:', data.agent_id, data.metrics);
+}
+
+function updatePaginationControls(pagination) {
+    // Update pagination info text
+    const paginationInfo = document.querySelector('.text-muted');
+    if (paginationInfo && pagination) {
+        const start = ((pagination.page - 1) * pagination.per_page) + 1;
+        const end = Math.min(pagination.page * pagination.per_page, pagination.total);
+        paginationInfo.textContent = `Showing ${start} to ${end} of ${pagination.total} entries`;
+    }
+    
+    // Update pagination buttons
+    const paginationNav = document.querySelector('nav[aria-label="Queue pagination"]');
+    if (paginationNav && pagination && pagination.pages > 1) {
+        paginationNav.style.display = 'block';
+        
+        // Update previous button
+        const prevBtn = paginationNav.querySelector('.page-item:first-child');
+        if (prevBtn) {
+            prevBtn.className = `page-item ${!pagination.has_prev ? 'disabled' : ''}`;
+            const prevLink = prevBtn.querySelector('.page-link');
+            if (prevLink) {
+                prevLink.onclick = () => { if (pagination.has_prev) loadPage(pagination.prev_num); return false; };
+            }
+        }
+        
+        // Update next button
+        const nextBtn = paginationNav.querySelector('.page-item:last-child');
+        if (nextBtn) {
+            nextBtn.className = `page-item ${!pagination.has_next ? 'disabled' : ''}`;
+            const nextLink = nextBtn.querySelector('.page-link');
+            if (nextLink) {
+                nextLink.onclick = () => { if (pagination.has_next) loadPage(pagination.next_num); return false; };
+            }
+        }
+    } else if (paginationNav) {
+        paginationNav.style.display = 'none';
+    }
+}
+
+// optimizeQueue function moved to earlier in file to avoid duplicates
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Initialize real-time updates when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Initial load of queue data
+    refreshQueueData();
+    
+    // Set up periodic fallback refresh (every 30 seconds)
+    setInterval(refreshQueueData, 30000);
+});
+
+function filterQueue() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const searchInput = document.getElementById('searchInput').value.toLowerCase();
+    const priorityFilter = document.getElementById('priorityFilter').value;
+    const rows = document.querySelectorAll('#queueTable tbody tr');
+    
+    rows.forEach(row => {
+        const status = row.dataset.status;
+        const priority = row.dataset.priority;
+        const text = row.textContent.toLowerCase();
+        
+        const statusMatch = !statusFilter || status === statusFilter;
+        const searchMatch = !searchInput || text.includes(searchInput);
+        const priorityMatch = !priorityFilter || priority === priorityFilter;
+        
+        if (statusMatch && searchMatch && priorityMatch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function clearFilters() {
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('searchInput').value = '';
+    document.getElementById('priorityFilter').value = '';
+    filterQueue();
+}
+
+// Duplicate functions removed - using enhanced versions defined earlier
+
+// Duplicate viewDetails function removed - using enhanced version defined earlier
+
+function getStatusColor(status) {
+    switch(status) {
+        case 'waiting': return 'warning';
+        case 'called': return 'info';
+        case 'in_progress': return 'primary';
+        case 'completed': return 'success';
+        case 'cancelled': return 'danger';
+        case 'no_show': return 'secondary';
+        default: return 'secondary';
+    }
+}
+
+// Auto-refresh every 30 seconds
+setInterval(refreshQueueData, 30000);
+</script>
+{% endblock %}

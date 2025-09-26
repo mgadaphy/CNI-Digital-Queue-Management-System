@@ -1,0 +1,122 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Citizen History{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Citizen History - {{ citizen.first_name }} {{ citizen.last_name }}</h5>
+                    <button type="button" class="btn btn-secondary" onclick="window.close()">Close</button>
+                </div>
+                <div class="card-body">
+                    <!-- Citizen Info -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Citizen Information</h6>
+                            <p><strong>Name:</strong> {{ citizen.first_name }} {{ citizen.last_name }}</p>
+                            <p><strong>Email:</strong> {{ citizen.email }}</p>
+                            <p><strong>Phone:</strong> {{ citizen.phone }}</p>
+                            <p><strong>ID Number:</strong> {{ citizen.id_number }}</p>
+                            <p><strong>Status:</strong> 
+                                <span class="badge {{ 'bg-success' if citizen.is_active else 'bg-danger' }}">
+                                    {{ 'Active' if citizen.is_active else 'Inactive' }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Registered:</strong> {{ citizen.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                            <p><strong>Last Updated:</strong> {{ citizen.updated_at.strftime('%Y-%m-%d %H:%M') if citizen.updated_at else 'N/A' }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Queue Entries -->
+                    {% if queue_entries %}
+                    <div class="mb-4">
+                        <h6>Queue Entries</h6>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Service Type</th>
+                                        <th>Queue Number</th>
+                                        <th>Status</th>
+                                        <th>Station</th>
+                                        <th>Wait Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for entry in queue_entries %}
+                                    <tr>
+                                        <td>{{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>{{ entry.service_type.name if entry.service_type else 'N/A' }}</td>
+                                        <td>{{ entry.queue_number }}</td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if entry.status == 'completed' %}bg-success
+                                                {% elif entry.status == 'in_progress' %}bg-primary
+                                                {% elif entry.status == 'waiting' %}bg-warning
+                                                {% else %}bg-secondary
+                                                {% endif %}">
+                                                {{ entry.status.title() }}
+                                            </span>
+                                        </td>
+                                        <td>{{ entry.station.name if entry.station else 'N/A' }}</td>
+                                        <td>
+                                            {% if entry.served_at and entry.created_at %}
+                                                {{ ((entry.served_at - entry.created_at).total_seconds() / 60) | round(1) }} min
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Service Logs -->
+                    {% if service_logs %}
+                    <div class="mb-4">
+                        <h6>Service Logs</h6>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Action</th>
+                                        <th>Details</th>
+                                        <th>User</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in service_logs %}
+                                    <tr>
+                                        <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>{{ log.action }}</td>
+                                        <td>{{ log.details or 'N/A' }}</td>
+                                        <td>{{ log.user.username if log.user else 'System' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if not queue_entries and not service_logs %}
+                    <div class="text-center py-4">
+                        <p class="text-muted">No history found for this citizen.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

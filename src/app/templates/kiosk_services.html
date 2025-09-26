@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px 0;
+        }
+        
+        .kiosk-header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 0;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .back-btn, .home-btn {
+            background: #95a5a6;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 20px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover, .home-btn:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+        }
+        
+        .services-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .service-section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            border-left: 6px solid #2980b9;
+        }
+        
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .service-card {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 3px solid transparent;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        
+        .service-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+        
+        .service-card.selected {
+            border-color: #27ae60;
+            background: linear-gradient(145deg, #e8f5e8, #f0f9f0);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(39, 174, 96, 0.3);
+            position: relative;
+        }
+        
+        .service-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #27ae60;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 8px rgba(39, 174, 96, 0.3);
+        }
+        
+        .service-card.cni-service {
+            border: 4px solid #2980b9;
+            background: #ffffff;
+            box-shadow: 0 12px 24px rgba(41, 128, 185, 0.2);
+        }
+        
+        .service-card.cni-service::before {
+            background: linear-gradient(90deg, #2980b9, #1f4e79);
+            height: 8px;
+        }
+        
+        .service-card.cni-service:hover {
+            border-color: #1f4e79;
+            background: #f8fbff;
+            box-shadow: 0 16px 32px rgba(41, 128, 185, 0.3);
+        }
+        
+        .service-card.other-service {
+            opacity: 0.9;
+        }
+        
+        .cni-icon {
+            background: linear-gradient(145deg, #2980b9, #1f4e79);
+            color: white;
+            box-shadow: 0 6px 12px rgba(41, 128, 185, 0.3);
+        }
+        
+        .cni-code {
+            background: linear-gradient(145deg, #2980b9, #1f4e79);
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 2px 4px rgba(41, 128, 185, 0.3);
+        }
+        
+        .service-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .service-icon {
+            font-size: 2.5rem;
+            margin-right: 20px;
+            padding: 15px;
+            border-radius: 15px;
+            background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+            color: #667eea;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .service-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 0;
+            line-height: 1.3;
+        }
+        
+        .service-code {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            font-weight: 600;
+            background: #ecf0f1;
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin-top: 5px;
+            display: inline-block;
+        }
+        
+        .service-description {
+            color: #5a6c7d;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .service-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 20px;
+            border-top: 2px solid #ecf0f1;
+        }
+        
+        .service-duration {
+            display: flex;
+            align-items: center;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .service-priority {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .priority-high {
+            background: #e74c3c;
+        }
+        
+        .priority-medium {
+            background: #f39c12;
+        }
+        
+        .priority-low {
+            background: #27ae60;
+        }
+        
+        .continue-section {
+            text-align: center;
+            margin-top: 40px;
+            padding: 30px;
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+        
+        .continue-btn {
+            background: linear-gradient(145deg, #27ae60, #2ecc71);
+            border: none;
+            border-radius: 50px;
+            padding: 20px 50px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(39, 174, 96, 0.3);
+            min-width: 250px;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        
+        .continue-btn.enabled {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .continue-btn.enabled:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(39, 174, 96, 0.4);
+            background: linear-gradient(145deg, #2ecc71, #27ae60);
+        }
+        
+        .selection-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+            display: none;
+        }
+        
+        .selection-info.show {
+            display: block;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .loading-spinner {
+            font-size: 3rem;
+            color: #667eea;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .service-card {
+                padding: 20px;
+            }
+            
+            .service-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .service-icon {
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="text-center">
+            <i class="fas fa-spinner loading-spinner"></i>
+            <div class="mt-3">
+                <h4 id="loading-text">
+                    {% if language == 'fr' %}Chargement...{% else %}Loading...{% endif %}
+                </h4>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container-fluid">
+        <div class="kiosk-header">
+            <div class="header-content">
+                <h1 class="header-title">
+                    <i class="fas fa-list-ul me-3"></i>
+                    {% if language == 'fr' %}
+                        Sélectionnez votre service
+                    {% else %}
+                        Select Your Service
+                    {% endif %}
+                </h1>
+                <div class="header-actions">
+                    <button class="back-btn" onclick="goBack()">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        {% if language == 'fr' %}Retour{% else %}Back{% endif %}
+                    </button>
+                    <button class="home-btn" onclick="goHome()">
+                        <i class="fas fa-home me-2"></i>
+                        {% if language == 'fr' %}Accueil{% else %}Home{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="services-container">
+            <!-- CNI Services Section -->
+            <div class="service-section">
+                <h2 class="section-title">
+                    <i class="fas fa-id-card me-3"></i>
+                    {% if language == 'fr' %}
+                        Services de Carte Nationale d'Identité (CNI)
+                    {% else %}
+                        National Identity Card (CNI) Services
+                    {% endif %}
+                </h2>
+                <div class="services-grid">
+                    {% for service in services if service.is_cni_service %}
+                    <div class="service-card cni-service" data-service-id="{{ service.id }}" data-service-name="{{ service.name }}">
+                        <div class="service-header">
+                            <div class="service-icon cni-icon">
+                                {% if service.code == 'NEW_APP' %}
+                                    <i class="fas fa-plus-circle"></i>
+                                {% elif service.code == 'RENEWAL' %}
+                                    <i class="fas fa-sync-alt"></i>
+                                {% elif service.code == 'COLLECTION' %}
+                                    <i class="fas fa-hand-holding"></i>
+                                {% elif service.code == 'CORRECTION' %}
+                                    <i class="fas fa-edit"></i>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h3 class="service-title">{{ service.name }}</h3>
+                                <span class="service-code cni-code">{{ service.code }}</span>
+                            </div>
+                        </div>
+                        
+                        <p class="service-description">{{ service.description }}</p>
+                        
+                        <div class="service-details">
+                            <div class="service-duration">
+                                <i class="fas fa-clock me-2"></i>
+                                {{ service.estimated_duration }} 
+                                {% if language == 'fr' %}min{% else %}min{% endif %}
+                            </div>
+                            <span class="service-priority 
+                                {% if service.priority_level <= 3 %}priority-high
+                                {% elif service.priority_level <= 6 %}priority-medium
+                                {% else %}priority-low{% endif %}">
+                                {% if language == 'fr' %}
+                                    {% if service.priority_level <= 3 %}Haute
+                                    {% elif service.priority_level <= 6 %}Moyenne
+                                    {% else %}Basse{% endif %}
+                                {% else %}
+                                    {% if service.priority_level <= 3 %}High
+                                    {% elif service.priority_level <= 6 %}Medium
+                                    {% else %}Low{% endif %}
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Other Services Section -->
+            {% set other_services = services|selectattr('is_cni_service', 'equalto', false)|list %}
+            {% if other_services %}
+            <div class="service-section">
+                <h2 class="section-title">
+                    <i class="fas fa-cogs me-3"></i>
+                    {% if language == 'fr' %}
+                        Autres Services
+                    {% else %}
+                        Other Services
+                    {% endif %}
+                </h2>
+                <div class="services-grid">
+                    {% for service in other_services %}
+                    <div class="service-card other-service" data-service-id="{{ service.id }}" data-service-name="{{ service.name }}">
+                        <div class="service-header">
+                            <div class="service-icon">
+                                {% if service.code == 'EMERGENCY' %}
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                {% elif service.code == 'APPOINTMENT' %}
+                                    <i class="fas fa-calendar-check"></i>
+                                {% else %}
+                                    <i class="fas fa-cog"></i>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h3 class="service-title">{{ service.name }}</h3>
+                                <span class="service-code">{{ service.code }}</span>
+                            </div>
+                        </div>
+                        
+                        <p class="service-description">{{ service.description }}</p>
+                        
+                        <div class="service-details">
+                            <div class="service-duration">
+                                <i class="fas fa-clock me-2"></i>
+                                {{ service.estimated_duration }} 
+                                {% if language == 'fr' %}min{% else %}min{% endif %}
+                            </div>
+                            <span class="service-priority 
+                                {% if service.priority_level <= 3 %}priority-high
+                                {% elif service.priority_level <= 6 %}priority-medium
+                                {% else %}priority-low{% endif %}">
+                                {% if language == 'fr' %}
+                                    {% if service.priority_level <= 3 %}Haute
+                                    {% elif service.priority_level <= 6 %}Moyenne
+                                    {% else %}Basse{% endif %}
+                                {% else %}
+                                    {% if service.priority_level <= 3 %}High
+                                    {% elif service.priority_level <= 6 %}Medium
+                                    {% else %}Low{% endif %}
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="continue-section">
+                <div class="selection-info" id="selection-info">
+                    <h5>
+                        <i class="fas fa-info-circle me-2"></i>
+                        {% if language == 'fr' %}
+                            Service sélectionné: <span id="selected-service-name"></span>
+                        {% else %}
+                            Selected service: <span id="selected-service-name"></span>
+                        {% endif %}
+                    </h5>
+                </div>
+                
+                <button class="continue-btn" id="continue-btn">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    {% if language == 'fr' %}Continuer vers l'enregistrement{% else %}Continue to Check-in{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let selectedServiceId = null;
+        let selectedServiceName = null;
+        
+        // Service selection handling
+        document.querySelectorAll('.service-card').forEach(card => {
+            card.addEventListener('click', function() {
+                // Remove previous selection
+                document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
+                
+                // Add selection to clicked card
+                this.classList.add('selected');
+                selectedServiceId = this.dataset.serviceId;
+                selectedServiceName = this.dataset.serviceName;
+                
+                // Show selection info
+                const selectionInfo = document.getElementById('selection-info');
+                const serviceNameSpan = document.getElementById('selected-service-name');
+                serviceNameSpan.textContent = selectedServiceName;
+                selectionInfo.classList.add('show');
+                
+                // Enable continue button
+                const continueBtn = document.getElementById('continue-btn');
+                continueBtn.classList.add('enabled');
+            });
+        });
+        
+        // Continue button handling
+        document.getElementById('continue-btn').addEventListener('click', function() {
+            if (!selectedServiceId) return;
+            
+            showLoading();
+            
+            // Navigate to check-in form
+            setTimeout(() => {
+                window.location.href = `/kiosk/checkin?service_id=${selectedServiceId}`;
+            }, 1000);
+        });
+        
+        function goBack() {
+            showLoading();
+            setTimeout(() => {
+                window.history.back();
+            }, 500);
+        }
+        
+        function goHome() {
+            showLoading();
+            setTimeout(() => {
+                window.location.href = '/kiosk/welcome';
+            }, 500);
+        }
+        
+        function showLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+        
+        // Prevent right-click and F12 for kiosk mode
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+                e.preventDefault();
+            }
+        });
+        
+        // Auto-refresh page every 10 minutes
+        setTimeout(() => {
+            window.location.reload();
+        }, 600000);
+    </script>
+</body>
+</html>

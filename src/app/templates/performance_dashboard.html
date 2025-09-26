@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Dashboard - CNI Queue Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        .alert-card {
+            border-left: 4px solid #dc3545;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .alert-card.warning {
+            border-left-color: #ffc107;
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+        }
+        .alert-card.info {
+            border-left-color: #17a2b8;
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-active { background-color: #28a745; }
+        .status-warning { background-color: #ffc107; }
+        .status-error { background-color: #dc3545; }
+        .refresh-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line me-2"></i>
+                Performance Dashboard
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">
+                    <span class="status-indicator status-active"></span>
+                    <span id="monitoring-status">Monitoring Active</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Key Metrics Row -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="queue-length">-</div>
+                    <div class="metric-label">
+                        <i class="fas fa-users me-1"></i>
+                        Current Queue Length
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="avg-wait-time">-</div>
+                    <div class="metric-label">
+                        <i class="fas fa-clock me-1"></i>
+                        Avg Wait Time (min)
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="agent-utilization">-</div>
+                    <div class="metric-label">
+                        <i class="fas fa-user-tie me-1"></i>
+                        Agent Utilization (%)
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-value" id="response-time">-</div>
+                    <div class="metric-label">
+                        <i class="fas fa-tachometer-alt me-1"></i>
+                        Avg Response Time (ms)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Active Alerts
+                            <span class="badge bg-danger ms-2" id="alert-count">0</span>
+                        </h5>
+                    </div>
+                    <div class="card-body" id="alerts-container">
+                        <p class="text-muted">No active alerts</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h6 class="mb-3">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Queue Length Over Time
+                    </h6>
+                    <canvas id="queueChart" height="200"></canvas>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h6 class="mb-3">
+                        <i class="fas fa-chart-area me-2"></i>
+                        Response Time Trends
+                    </h6>
+                    <canvas id="responseChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Performance Row -->
+        <div class="row mt-4">
+            <div class="col-md-8">
+                <div class="chart-container">
+                    <h6 class="mb-3">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Service Type Distribution
+                    </h6>
+                    <canvas id="serviceChart" height="150"></canvas>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-cogs me-2"></i>
+                            System Status
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted">Monitoring Status</small>
+                            <div id="system-monitoring-status" class="fw-bold">Active</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Collection Interval</small>
+                            <div id="collection-interval" class="fw-bold">30s</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Metrics Buffer</small>
+                            <div id="metrics-buffer-size" class="fw-bold">0</div>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Last Update</small>
+                            <div id="last-update" class="fw-bold">-</div>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm" onclick="restartMonitoring()">
+                            <i class="fas fa-redo me-1"></i>
+                            Restart Monitoring
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Refresh Button -->
+    <button class="btn btn-primary btn-lg refresh-btn" onclick="refreshDashboard()">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Chart instances
+        let queueChart, responseChart, serviceChart;
+        
+        // Initialize charts
+        function initializeCharts() {
+            // Queue Length Chart
+            const queueCtx = document.getElementById('queueChart').getContext('2d');
+            queueChart = new Chart(queueCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Queue Length',
+                        data: [],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Response Time Chart
+            const responseCtx = document.getElementById('responseChart').getContext('2d');
+            responseChart = new Chart(responseCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Response Time (ms)',
+                        data: [],
+                        borderColor: '#764ba2',
+                        backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Service Distribution Chart
+            const serviceCtx = document.getElementById('serviceChart').getContext('2d');
+            serviceChart = new Chart(serviceCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            '#667eea', '#764ba2', '#f093fb', '#f5576c',
+                            '#4facfe', '#00f2fe', '#43e97b', '#38f9d7'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // Fetch dashboard data
+        async function fetchDashboardData() {
+            try {
+                const response = await fetch('/api/performance/dashboard');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateDashboard(data.data);
+                } else {
+                    console.error('Failed to fetch dashboard data:', data.error);
+                }
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+            }
+        }
+
+        // Update dashboard with new data
+        function updateDashboard(data) {
+            // Update key metrics
+            document.getElementById('queue-length').textContent = data.current_metrics?.queue_length || '-';
+            document.getElementById('avg-wait-time').textContent = 
+                data.current_metrics?.average_wait_time ? 
+                Math.round(data.current_metrics.average_wait_time) : '-';
+            document.getElementById('agent-utilization').textContent = 
+                data.current_metrics?.agent_utilization ? 
+                Math.round(data.current_metrics.agent_utilization) : '-';
+            document.getElementById('response-time').textContent = 
+                data.current_metrics?.average_response_time ? 
+                Math.round(data.current_metrics.average_response_time) : '-';
+
+            // Update charts
+            if (data.historical_data) {
+                updateCharts(data.historical_data);
+            }
+
+            // Update last update time
+            document.getElementById('last-update').textContent = 
+                new Date().toLocaleTimeString();
+        }
+
+        // Update charts with historical data
+        function updateCharts(historicalData) {
+            if (historicalData.queue_length) {
+                const queueData = historicalData.queue_length;
+                queueChart.data.labels = queueData.map(d => new Date(d.timestamp).toLocaleTimeString());
+                queueChart.data.datasets[0].data = queueData.map(d => d.value);
+                queueChart.update();
+            }
+
+            if (historicalData.response_times) {
+                const responseData = historicalData.response_times;
+                responseChart.data.labels = responseData.map(d => new Date(d.timestamp).toLocaleTimeString());
+                responseChart.data.datasets[0].data = responseData.map(d => d.value);
+                responseChart.update();
+            }
+
+            if (historicalData.service_distribution) {
+                const serviceData = historicalData.service_distribution;
+                serviceChart.data.labels = Object.keys(serviceData);
+                serviceChart.data.datasets[0].data = Object.values(serviceData);
+                serviceChart.update();
+            }
+        }
+
+        // Fetch and display alerts
+        async function fetchAlerts() {
+            try {
+                const response = await fetch('/api/performance/alerts');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateAlerts(data.data.alerts);
+                }
+            } catch (error) {
+                console.error('Error fetching alerts:', error);
+            }
+        }
+
+        // Update alerts display
+        function updateAlerts(alerts) {
+            const container = document.getElementById('alerts-container');
+            const countBadge = document.getElementById('alert-count');
+            
+            countBadge.textContent = alerts.length;
+            
+            if (alerts.length === 0) {
+                container.innerHTML = '<p class="text-muted">No active alerts</p>';
+                return;
+            }
+
+            const alertsHtml = alerts.map(alert => {
+                const alertClass = alert.level === 'critical' ? 'alert-card' : 
+                                 alert.level === 'warning' ? 'alert-card warning' : 'alert-card info';
+                
+                return `
+                    <div class="alert ${alertClass} mb-2">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>${alert.metric_name}</strong>
+                                <p class="mb-1">${alert.message}</p>
+                                <small>Current: ${alert.current_value} | Threshold: ${alert.threshold_value}</small>
+                            </div>
+                            <div>
+                                <span class="badge bg-${alert.level === 'critical' ? 'danger' : alert.level === 'warning' ? 'warning' : 'info'}">
+                                    ${alert.level.toUpperCase()}
+                                </span>
+                                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="resolveAlert('${alert.id}')">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = alertsHtml;
+        }
+
+        // Resolve alert
+        async function resolveAlert(alertId) {
+            try {
+                const response = await fetch(`/api/performance/alerts/${alertId}/resolve`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    fetchAlerts(); // Refresh alerts
+                }
+            } catch (error) {
+                console.error('Error resolving alert:', error);
+            }
+        }
+
+        // Restart monitoring
+        async function restartMonitoring() {
+            try {
+                const response = await fetch('/api/performance/monitoring/restart', {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    alert('Monitoring system restarted successfully');
+                    fetchMonitoringStatus();
+                }
+            } catch (error) {
+                console.error('Error restarting monitoring:', error);
+            }
+        }
+
+        // Fetch monitoring status
+        async function fetchMonitoringStatus() {
+            try {
+                const response = await fetch('/api/performance/monitoring/status');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateMonitoringStatus(data.data);
+                }
+            } catch (error) {
+                console.error('Error fetching monitoring status:', error);
+            }
+        }
+
+        // Update monitoring status display
+        function updateMonitoringStatus(status) {
+            document.getElementById('system-monitoring-status').textContent = 
+                status.monitoring_active ? 'Active' : 'Inactive';
+            document.getElementById('collection-interval').textContent = 
+                `${status.collection_interval}s`;
+            document.getElementById('metrics-buffer-size').textContent = 
+                status.metrics_buffer_size;
+            
+            // Update status indicator
+            const indicator = document.querySelector('.status-indicator');
+            const statusText = document.getElementById('monitoring-status');
+            
+            if (status.monitoring_active) {
+                indicator.className = 'status-indicator status-active';
+                statusText.textContent = 'Monitoring Active';
+            } else {
+                indicator.className = 'status-indicator status-error';
+                statusText.textContent = 'Monitoring Inactive';
+            }
+        }
+
+        // Refresh dashboard
+        function refreshDashboard() {
+            fetchDashboardData();
+            fetchAlerts();
+            fetchMonitoringStatus();
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            refreshDashboard();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(refreshDashboard, 30000);
+        });
+    </script>
+</body>
+</html>

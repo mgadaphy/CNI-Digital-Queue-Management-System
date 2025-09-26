@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+
+{% block title %}Select Service - CNI Queue Management{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Header -->
+        <div class="col-12 mb-4">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h4 class="mb-0">
+                                <i class="fas fa-list-alt me-2"></i>
+                                Select Service
+                            </h4>
+                            <small>Choose the service you need to request a ticket</small>
+                        </div>
+                        <div class="col-auto">
+                            <a href="{{ url_for('user.dashboard') }}" class="btn btn-outline-light">
+                                <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Welcome:</strong> {{ citizen.first_name }} {{ citizen.last_name }}</p>
+                            <p class="mb-0"><strong>Enrollment Code:</strong> {{ citizen.pre_enrollment_code }}</p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <span class="badge bg-info fs-6">
+                                <i class="fas fa-clock me-1"></i>
+                                Current Time: <span id="currentTime"></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Selection -->
+        <div class="col-12">
+            <div class="row">
+                {% for service in services %}
+                <div class="col-lg-6 col-xl-4 mb-4">
+                    <div class="card h-100 service-card" data-service-id="{{ service.id }}">
+                        <div class="card-header bg-light">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h5 class="mb-0 text-primary">{{ service.name_en }}</h5>
+                                    {% if service.name_fr %}
+                                        <small class="text-muted">{{ service.name_fr }}</small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-auto">
+                                    {% if service.priority_level == 1 %}
+                                        <span class="badge bg-danger">High Priority</span>
+                                    {% elif service.priority_level == 2 %}
+                                        <span class="badge bg-warning text-dark">Medium Priority</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Normal Priority</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-3">{{ service.description or 'Service for ' + service.name_en }}</p>
+                            
+                            <div class="mb-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Estimated processing time: 
+                                    {% if service.estimated_duration %}
+                                        {{ service.estimated_duration }} minutes
+                                    {% else %}
+                                        15-30 minutes
+                                    {% endif %}
+                                </small>
+                            </div>
+                            
+                            <!-- Special Factors -->
+                            <div class="special-factors" id="factors-{{ service.id }}" style="display: none;">
+                                <h6 class="text-secondary mb-2">Additional Information:</h6>
+                                
+                                {% if service.code in ['NEW_APPLICATION', 'RENEWAL'] %}
+                                <div class="mb-2">
+                                    <label class="form-label small">Do you have all required documents?</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="documents-{{ service.id }}" checked>
+                                        <label class="form-check-label small" for="documents-{{ service.id }}">
+                                            Yes, I have all required documents
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if service.code == 'EMERGENCY' %}
+                                <div class="mb-2">
+                                    <label class="form-label small">Emergency Type:</label>
+                                    <select class="form-select form-select-sm" id="emergency-type-{{ service.id }}">
+                                        <option value="travel">Urgent Travel</option>
+                                        <option value="medical">Medical Emergency</option>
+                                        <option value="legal">Legal Requirement</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="disability-{{ service.id }}">
+                                        <label class="form-check-label small" for="disability-{{ service.id }}">
+                                            I have a disability or mobility issue
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="elderly-{{ service.id }}">
+                                        <label class="form-check-label small" for="elderly-{{ service.id }}">
+                                            I am 65 years or older
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-grid">
+                                <button class="btn btn-primary" onclick="selectService({{ service.id }})">
+                                    <i class="fas fa-ticket-alt me-2"></i>
+                                    Request Ticket
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-ticket-alt me-2"></i>
+                    Confirm Ticket Request
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12">
+                        <h6>Service Details:</h6>
+                        <p id="selectedServiceName" class="text-primary mb-2"></p>
+                        <p id="selectedServiceDescription" class="text-muted small mb-3"></p>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Please note:</strong> Once you request a ticket, you will be added to the queue. Make sure you are ready to wait for your turn.
+                        </div>
+                        
+                        <div id="specialFactorsSummary" style="display: none;">
+                            <h6>Additional Information:</h6>
+                            <ul id="factorsList" class="small text-muted"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmRequestBtn" onclick="confirmTicketRequest()">
+                    <i class="fas fa-check me-2"></i>
+                    Confirm Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Messages -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="successToast" class="toast" role="alert">
+        <div class="toast-header bg-success text-white">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong class="me-auto">Success</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="successMessage"></div>
+    </div>
+    
+    <div id="errorToast" class="toast" role="alert">
+        <div class="toast-header bg-danger text-white">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <strong class="me-auto">Error</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="errorMessage"></div>
+    </div>
+</div>
+
+<script>
+let selectedServiceId = null;
+let selectedServiceData = null;
+
+// Update current time
+function updateTime() {
+    const now = new Date();
+    document.getElementById('currentTime').textContent = now.toLocaleTimeString();
+}
+
+// Update time every second
+setInterval(updateTime, 1000);
+updateTime();
+
+// Service card hover effects
+document.querySelectorAll('.service-card').forEach(card => {
+    card.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-2px)';
+        this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+    });
+    
+    card.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = '';
+    });
+});
+
+function selectService(serviceId) {
+    selectedServiceId = serviceId;
+    
+    // Find service data
+    const services = {{ services | tojson }};
+    selectedServiceData = services.find(s => s.id === serviceId);
+    
+    if (!selectedServiceData) {
+        showError('Service not found');
+        return;
+    }
+    
+    // Show special factors form
+    const factorsDiv = document.getElementById(`factors-${serviceId}`);
+    factorsDiv.style.display = 'block';
+    
+    // Scroll to the service card
+    document.querySelector(`[data-service-id="${serviceId}"]`).scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+    });
+    
+    // Show confirmation modal after a brief delay
+    setTimeout(() => {
+        showConfirmationModal();
+    }, 500);
+}
+
+function showConfirmationModal() {
+    if (!selectedServiceData) return;
+    
+    // Update modal content
+    document.getElementById('selectedServiceName').textContent = selectedServiceData.name_en;
+    document.getElementById('selectedServiceDescription').textContent = 
+        selectedServiceData.description || `Service for ${selectedServiceData.name_en}`;
+    
+    // Collect special factors
+    const factors = collectSpecialFactors(selectedServiceId);
+    if (factors.length > 0) {
+        const factorsList = document.getElementById('factorsList');
+        factorsList.innerHTML = factors.map(f => `<li>${f}</li>`).join('');
+        document.getElementById('specialFactorsSummary').style.display = 'block';
+    } else {
+        document.getElementById('specialFactorsSummary').style.display = 'none';
+    }
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+    modal.show();
+}
+
+function collectSpecialFactors(serviceId) {
+    const factors = [];
+    
+    // Check documents
+    const documentsCheck = document.getElementById(`documents-${serviceId}`);
+    if (documentsCheck && documentsCheck.checked) {
+        factors.push('Has all required documents');
+    }
+    
+    // Check emergency type
+    const emergencyType = document.getElementById(`emergency-type-${serviceId}`);
+    if (emergencyType) {
+        factors.push(`Emergency type: ${emergencyType.options[emergencyType.selectedIndex].text}`);
+    }
+    
+    // Check disability
+    const disabilityCheck = document.getElementById(`disability-${serviceId}`);
+    if (disabilityCheck && disabilityCheck.checked) {
+        factors.push('Has disability or mobility issue');
+    }
+    
+    // Check elderly
+    const elderlyCheck = document.getElementById(`elderly-${serviceId}`);
+    if (elderlyCheck && elderlyCheck.checked) {
+        factors.push('65 years or older');
+    }
+    
+    return factors;
+}
+
+function confirmTicketRequest() {
+    if (!selectedServiceId) {
+        showError('No service selected');
+        return;
+    }
+    
+    const confirmBtn = document.getElementById('confirmRequestBtn');
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+    
+    // Collect special factors data
+    const specialFactors = {};
+    
+    const documentsCheck = document.getElementById(`documents-${selectedServiceId}`);
+    if (documentsCheck) {
+        specialFactors.has_documents = documentsCheck.checked;
+    }
+    
+    const emergencyType = document.getElementById(`emergency-type-${selectedServiceId}`);
+    if (emergencyType) {
+        specialFactors.emergency_type = emergencyType.value;
+    }
+    
+    const disabilityCheck = document.getElementById(`disability-${selectedServiceId}`);
+    if (disabilityCheck) {
+        specialFactors.has_disability = disabilityCheck.checked;
+    }
+    
+    const elderlyCheck = document.getElementById(`elderly-${selectedServiceId}`);
+    if (elderlyCheck) {
+        specialFactors.is_elderly = elderlyCheck.checked;
+    }
+    
+    fetch('/user/request-ticket', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            service_type_id: selectedServiceId,
+            special_factors: specialFactors
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Hide modal
+            bootstrap.Modal.getInstance(document.getElementById('confirmationModal')).hide();
+            
+            // Show success message
+            showSuccess(`Ticket ${data.ticket_number} generated successfully! Estimated wait: ${data.estimated_wait_time} minutes.`);
+            
+            // Redirect to dashboard after 2 seconds
+            setTimeout(() => {
+                window.location.href = '{{ url_for("user.dashboard") }}';
+            }, 2000);
+        } else {
+            showError(data.message || 'Error generating ticket');
+            resetConfirmButton();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showError('Network error occurred');
+        resetConfirmButton();
+    });
+}
+
+function resetConfirmButton() {
+    const confirmBtn = document.getElementById('confirmRequestBtn');
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = '<i class="fas fa-check me-2"></i>Confirm Request';
+}
+
+function showSuccess(message) {
+    const successToast = document.getElementById('successToast');
+    const successMessage = document.getElementById('successMessage');
+    successMessage.textContent = message;
+    
+    const bsToast = new bootstrap.Toast(successToast);
+    bsToast.show();
+}
+
+function showError(message) {
+    const errorToast = document.getElementById('errorToast');
+    const errorMessage = document.getElementById('errorMessage');
+    errorMessage.textContent = message;
+    
+    const bsToast = new bootstrap.Toast(errorToast);
+    bsToast.show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,173 @@
+/* Custom styles will go here */
+
+/* Layout and Navbar Fixes */
+/* Top header navbar styling */
+.top-header {
+    background-color: #343a40;
+    border-bottom: 1px solid #495057;
+    padding: 0;
+    margin-bottom: 0;
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+
+.top-header .navbar {
+    padding: 0.5rem 1rem;
+}
+
+.top-header .navbar-brand {
+    font-weight: 600;
+    color: #ffffff !important;
+}
+
+.top-header .nav-link {
+    color: #ffffff !important;
+    padding: 0.5rem 1rem;
+}
+
+.top-header .nav-link:hover {
+    color: #f8f9fa !important;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 0.25rem;
+}
+
+.top-header .dropdown-menu {
+    border: 1px solid #495057;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Secondary header for admin pages */
+.admin-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.75rem 0;
+    margin-bottom: 1rem;
+}
+
+.admin-header .navbar {
+    padding: 0;
+}
+
+.admin-header .navbar-nav .nav-link {
+    color: #495057 !important;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    margin-right: 0.25rem;
+}
+
+.admin-header .navbar-nav .nav-link:hover {
+    color: #212529 !important;
+    background-color: #e9ecef;
+}
+
+.admin-header .navbar-nav .nav-link.active {
+    color: #007bff !important;
+    background-color: #e7f1ff;
+}
+
+/* Main content area adjustments */
+.main-content {
+    min-height: calc(100vh - 60px); /* Adjust based on header height */
+    padding-top: 0;
+}
+
+.container-fluid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+/* Remove extra margins that cause spacing issues */
+body {
+    margin: 0;
+    padding: 0;
+}
+
+/* Ensure proper spacing for page content */
+.content-wrapper {
+    padding: 1rem 0;
+}
+
+/* Fix navbar toggler for mobile */
+.navbar-toggler {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.navbar-toggler:focus {
+    box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .top-header .navbar-collapse {
+        background-color: #343a40;
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+    }
+    
+    .admin-header .navbar-collapse {
+        background-color: #f8f9fa;
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        border: 1px solid #dee2e6;
+    }
+}
+
+/* Fix visibility issues with status badges */
+.badge-secondary {
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+}
+
+/* Ensure better contrast for inactive status */
+.badge.badge-secondary {
+    background-color: #495057 !important;
+    color: #ffffff !important;
+    border: 1px solid #343a40;
+}
+
+/* Alternative dark badge for better visibility */
+.badge-dark {
+    background-color: #343a40 !important;
+    color: #ffffff !important;
+}
+
+/* Fix badge-info contrast issues */
+.badge-info {
+    background-color: #17a2b8 !important;
+    color: #ffffff !important;
+}
+
+/* Ensure all badges have proper contrast */
+.badge-success {
+    background-color: #28a745 !important;
+    color: #ffffff !important;
+}
+
+.badge-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+}
+
+.badge-danger {
+    background-color: #dc3545 !important;
+    color: #ffffff !important;
+}
+
+/* Fix any potential grey background issues */
+.table-striped tbody tr:nth-of-type(odd) .badge {
+    /* Ensure badges maintain their background color even on striped rows */
+    opacity: 1 !important;
+}
+
+/* Additional contrast fixes for table content */
+.table td {
+    color: #212529 !important;
+}
+
+.table-striped tbody tr:nth-of-type(odd) td {
+    background-color: rgba(0,0,0,.05) !important;
+    color: #212529 !important;
+}

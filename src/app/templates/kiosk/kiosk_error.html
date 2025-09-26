@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="{{ language or 'fr' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if language == 'en' %}Error - CNI Digital Queue{% else %}Erreur - File Numérique CNI{% endif %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .error-container {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+        .error-icon {
+            font-size: 4rem;
+            color: #dc3545;
+            margin-bottom: 1.5rem;
+        }
+        .error-title {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        .error-message {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        .btn-home {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+        .btn-home:hover {
+            transform: translateY(-2px);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        
+        <div class="error-title">
+            {% if language == 'en' %}
+                Oops! Something went wrong
+            {% else %}
+                Oups! Une erreur s'est produite
+            {% endif %}
+        </div>
+        
+        <div class="error-message">
+            {{ error_message or ("An unexpected error occurred. Please try again." if language == 'en' else "Une erreur inattendue s'est produite. Veuillez réessayer.") }}
+        </div>
+        
+        <a href="{{ url_for('kiosk.welcome') }}" class="btn-home">
+            <i class="fas fa-home me-2"></i>
+            {% if language == 'en' %}
+                Return to Welcome
+            {% else %}
+                Retour à l'accueil
+            {% endif %}
+        </a>
+    </div>
+
+    <script>
+        // Prevent right-click and F12 for kiosk mode
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+                e.preventDefault();
+            }
+        });
+        
+        // Auto-redirect removed to allow user to read error message
+        // Users can manually click "Return to Welcome" button
+    </script>
+</body>
+</html>

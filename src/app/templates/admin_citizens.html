@@ -1,0 +1,559 @@
+{% extends "base.html" %}
+
+{% block header %}
+<div class="admin-header bg-light border-bottom">
+    <div class="container-fluid">
+        <nav class="navbar navbar-expand-lg navbar-light">
+            <div class="container-fluid px-0">
+                <div class="navbar-nav">
+                    <a class="nav-link" href="{{ url_for('admin.admin_dashboard') }}"><i class="fas fa-tachometer-alt me-1"></i>Dashboard</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_agents') }}"><i class="fas fa-users me-1"></i>Agents</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_service_types') }}"><i class="fas fa-cogs me-1"></i>Service Types</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_stations') }}"><i class="fas fa-desktop me-1"></i>Stations</a>
+                    <a class="nav-link active" href="{{ url_for('admin.manage_citizens') }}"><i class="fas fa-user-friends me-1"></i>Citizens</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_queue') }}"><i class="fas fa-list-ol me-1"></i>Queue</a>
+                    <a class="nav-link" href="{{ url_for('admin.system_reports') }}"><i class="fas fa-chart-bar me-1"></i>Reports</a>
+                </div>
+                <div class="navbar-nav ms-auto">
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i>
+                            {% if current_user %}
+                                {{ current_user.first_name }} {{ current_user.last_name }}
+                            {% else %}
+                                Admin User
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('admin.admin_profile') }}"><i class="fas fa-user me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.admin_settings') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}" onclick="handleLogout(event)"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Citizens Management</h3>
+                    <div>
+                        <button class="btn btn-primary" onclick="refreshCitizens()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addCitizenModal">
+                            <i class="fas fa-plus"></i> Add Citizen
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Citizens Statistics -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ citizens|length }}</h4>
+                                    <p class="mb-0">Total Citizens</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ citizens|selectattr('is_active', 'equalto', true)|list|length }}</h4>
+                                    <p class="mb-0">Active Citizens</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ citizens|selectattr('has_special_needs', 'equalto', true)|list|length }}</h4>
+                                    <p class="mb-0">Special Needs</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body text-center">
+                                    <h4 id="todayCount">0</h4>
+                                    <p class="mb-0">Registered Today</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Search and Filter Controls -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" id="searchInput" placeholder="Search by name, ID, or phone" onkeyup="filterCitizens()">
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="statusFilter" onchange="filterCitizens()">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="specialNeedsFilter" onchange="filterCitizens()">
+                                <option value="">All Citizens</option>
+                                <option value="special">Special Needs</option>
+                                <option value="regular">Regular</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" class="form-control" id="dateFilter" onchange="filterCitizens()">
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Citizens Table -->
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="citizensTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>ID Number</th>
+                                    <th>PE Code</th>
+                                    <th>Phone</th>
+                                    <th>Email</th>
+                                    <th>Special Needs</th>
+                                    <th>Status</th>
+                                    <th>Registered</th>
+                                    <th>Last Visit</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for citizen in citizens %}
+                                <tr data-status="{{ 'active' if citizen.is_active else 'inactive' }}" 
+                                    data-special="{{ 'special' if citizen.has_special_needs else 'regular' }}" 
+                                    data-date="{{ citizen.created_at.strftime('%Y-%m-%d') }}">
+                                    <td><strong>{{ citizen.id }}</strong></td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if citizen.has_special_needs %}
+                                                <i class="fas fa-wheelchair text-info me-2" title="Special Needs"></i>
+                                            {% endif %}
+                                            {{ citizen.first_name }} {{ citizen.last_name }}
+                                        </div>
+                                    </td>
+                                    <td>{{ citizen.id_number or 'N/A' }}</td>
+                                    <td>
+                                        {% if citizen.pre_enrollment_code %}
+                                            <span class="badge bg-primary">{{ citizen.pre_enrollment_code }}</span>
+                                        {% else %}
+                                            <span class="text-muted">No PE Code</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ citizen.phone or 'N/A' }}</td>
+                                    <td>{{ citizen.email or 'N/A' }}</td>
+                                    <td>
+                                        {% if citizen.has_special_needs %}
+                                            <span class="badge bg-info">Yes</span>
+                                            {% if citizen.special_needs_description %}
+                                                <br><small class="text-muted">{{ citizen.special_needs_description[:30] }}...</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-dark">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if citizen.is_active else 'dark' }}">
+                                            {{ 'Active' if citizen.is_active else 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small>{{ citizen.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    </td>
+                                    <td>
+                                        <small>{{ citizen.updated_at.strftime('%Y-%m-%d %H:%M') if citizen.updated_at else 'Never' }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button class="btn btn-outline-primary" onclick="viewCitizen({{ citizen.id }})" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-outline-warning" onclick="editCitizen({{ citizen.id }})" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-info" onclick="viewHistory({{ citizen.id }})" title="View History">
+                                                <i class="fas fa-history"></i>
+                                            </button>
+                                            {% if citizen.is_active %}
+                                                <button class="btn btn-outline-secondary" onclick="deactivateCitizen({{ citizen.id }})" title="Deactivate">
+                                                    <i class="fas fa-ban"></i>
+                                                </button>
+                                            {% else %}
+                                                <button class="btn btn-outline-success" onclick="activateCitizen({{ citizen.id }})" title="Activate">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {% if not citizens %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No citizens found</h5>
+                        <p class="text-muted">Citizens will appear here as they register in the system.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Citizen Modal -->
+<div class="modal fade" id="addCitizenModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Citizen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addCitizenForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="firstName" class="form-label">First Name *</label>
+                                <input type="text" class="form-control" id="firstName" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="lastName" class="form-label">Last Name *</label>
+                                <input type="text" class="form-control" id="lastName" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="preEnrollmentCode" class="form-label">Pre-enrollment Code</label>
+                                <input type="text" class="form-control" id="preEnrollmentCode">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="dateOfBirth" class="form-label">Date of Birth</label>
+                                <input type="date" class="form-control" id="dateOfBirth">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="phoneNumber" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phoneNumber">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="preferredLanguage" class="form-label">Preferred Language</label>
+                                <select class="form-select" id="preferredLanguage">
+                                    <option value="en">English</option>
+                                    <option value="fr">French</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="hasSpecialNeeds">
+                            <label class="form-check-label" for="hasSpecialNeeds">
+                                Has Special Needs
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="specialNeedsDescription" style="display: none;">
+                        <label for="specialNeeds" class="form-label">Special Needs Description</label>
+                        <textarea class="form-control" id="specialNeeds" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveCitizen()">Save Citizen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshCitizens() {
+    location.reload();
+}
+
+function filterCitizens() {
+    const searchInput = document.getElementById('searchInput').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    const specialNeedsFilter = document.getElementById('specialNeedsFilter').value;
+    const dateFilter = document.getElementById('dateFilter').value;
+    const rows = document.querySelectorAll('#citizensTable tbody tr');
+    
+    rows.forEach(row => {
+        const status = row.dataset.status;
+        const special = row.dataset.special;
+        const date = row.dataset.date;
+        const text = row.textContent.toLowerCase();
+        
+        const searchMatch = !searchInput || text.includes(searchInput);
+        const statusMatch = !statusFilter || status === statusFilter;
+        const specialMatch = !specialNeedsFilter || special === specialNeedsFilter;
+        const dateMatch = !dateFilter || date === dateFilter;
+        
+        if (searchMatch && statusMatch && specialMatch && dateMatch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('specialNeedsFilter').value = '';
+    document.getElementById('dateFilter').value = '';
+    filterCitizens();
+}
+
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+function viewCitizen(citizenId) {
+    window.open(`/admin/citizens/${citizenId}/view`, '_blank');
+}
+
+function editCitizen(citizenId) {
+    window.open(`/admin/citizens/${citizenId}/edit`, '_blank');
+}
+
+function viewHistory(citizenId) {
+    fetch(`/admin/citizens/${citizenId}/history`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        showHistoryModal(data);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error loading citizen history. Please try again.');
+    });
+}
+
+function deactivateCitizen(citizenId) {
+    if (confirm('Are you sure you want to deactivate this citizen?')) {
+        fetch(`/admin/citizens/${citizenId}/deactivate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Citizen deactivated successfully!');
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Network error. Please try again.');
+        });
+    }
+}
+
+function activateCitizen(citizenId) {
+    if (confirm('Are you sure you want to activate this citizen?')) {
+        fetch(`/admin/citizens/${citizenId}/activate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Citizen activated successfully!');
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Network error. Please try again.');
+        });
+    }
+}
+
+function saveCitizen() {
+    const formData = {
+        first_name: document.getElementById('firstName').value,
+        last_name: document.getElementById('lastName').value,
+        pre_enrollment_code: document.getElementById('preEnrollmentCode').value,
+        date_of_birth: document.getElementById('dateOfBirth').value,
+        phone_number: document.getElementById('phoneNumber').value,
+        email: document.getElementById('email').value,
+        preferred_language: document.getElementById('preferredLanguage').value,
+        special_needs: document.getElementById('hasSpecialNeeds').checked ? document.getElementById('specialNeeds').value : null
+    };
+    
+    // Validate required fields
+    if (!formData.first_name || !formData.last_name) {
+        alert('Please fill in all required fields.');
+        return;
+    }
+    
+    // Send data to backend
+    fetch('/admin/citizens/create', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Citizen added successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Network error. Please try again.');
+    });
+}
+
+// Toggle special needs description
+document.getElementById('hasSpecialNeeds').addEventListener('change', function() {
+    const description = document.getElementById('specialNeedsDescription');
+    if (this.checked) {
+        description.style.display = 'block';
+    } else {
+        description.style.display = 'none';
+        document.getElementById('specialNeeds').value = '';
+    }
+});
+
+// Calculate today's registrations
+        function calculateTodayCount() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const citizensData = [
+                {% for citizen in citizens %}
+                {
+                    id: {{ citizen.id }},
+                    created_at: '{{ citizen.created_at.isoformat() }}'
+                }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ];
+            
+            const todayCount = citizensData.filter(citizen => {
+                const createdDate = new Date(citizen.created_at);
+                createdDate.setHours(0, 0, 0, 0);
+                return createdDate.getTime() === today.getTime();
+            }).length;
+            
+            document.getElementById('todayCount').textContent = todayCount;
+        }
+
+// Show history modal
+function showHistoryModal(data) {
+    let historyHtml = '<div class="modal fade" id="historyModal" tabindex="-1">';
+    historyHtml += '<div class="modal-dialog modal-lg">';
+    historyHtml += '<div class="modal-content">';
+    historyHtml += '<div class="modal-header">';
+    historyHtml += '<h5 class="modal-title">Citizen History</h5>';
+    historyHtml += '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>';
+    historyHtml += '</div>';
+    historyHtml += '<div class="modal-body">';
+    
+    if (data.queue_entries && data.queue_entries.length > 0) {
+        historyHtml += '<h6>Queue Entries:</h6>';
+        historyHtml += '<div class="table-responsive">';
+        historyHtml += '<table class="table table-sm">';
+        historyHtml += '<thead><tr><th>Date</th><th>Service</th><th>Status</th></tr></thead><tbody>';
+        data.queue_entries.forEach(entry => {
+            historyHtml += `<tr><td>${new Date(entry.created_at).toLocaleDateString()}</td><td>${entry.service_type}</td><td>${entry.status}</td></tr>`;
+        });
+        historyHtml += '</tbody></table></div>';
+    }
+    
+    if (data.service_logs && data.service_logs.length > 0) {
+        historyHtml += '<h6>Service Logs:</h6>';
+        historyHtml += '<div class="table-responsive">';
+        historyHtml += '<table class="table table-sm">';
+        historyHtml += '<thead><tr><th>Date</th><th>Action</th><th>Details</th></tr></thead><tbody>';
+        data.service_logs.forEach(log => {
+            historyHtml += `<tr><td>${new Date(log.created_at).toLocaleDateString()}</td><td>${log.action}</td><td>${log.details || ''}</td></tr>`;
+        });
+        historyHtml += '</tbody></table></div>';
+    }
+    
+    if ((!data.queue_entries || data.queue_entries.length === 0) && (!data.service_logs || data.service_logs.length === 0)) {
+        historyHtml += '<p>No history found for this citizen.</p>';
+    }
+    
+    historyHtml += '</div></div></div></div>';
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('historyModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add new modal to body
+    document.body.insertAdjacentHTML('beforeend', historyHtml);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('historyModal'));
+    modal.show();
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    calculateTodayCount();
+});
+</script>
+{% endblock %}

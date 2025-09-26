@@ -1,0 +1,1115 @@
+{% extends "base.html" %}
+
+{% block header %}
+<!-- Admin Secondary Navigation -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
+    <div class="container-fluid">
+        <span class="navbar-text fw-bold">
+            <i class="fas fa-tachometer-alt"></i> Admin Panel
+        </span>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="adminNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('admin.admin_dashboard') }}">Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin.manage_agents') }}">Agents</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin.manage_service_types') }}">Service Types</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin.manage_stations') }}">Stations</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin.manage_citizens') }}">Citizens</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin.manage_queue') }}">Queue</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin.system_reports') }}">Reports</a>
+                </li>
+            </ul>
+            <div class="navbar-nav">
+                <a href="{{ url_for('agent.agent_dashboard') }}" class="btn btn-outline-secondary btn-sm me-2">Agent Dashboard</a>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="mb-4">Admin Dashboard</h1>
+            
+            <!-- Real-time Metrics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-2">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Queue Waiting</h5>
+                            <h2 id="queue-waiting">{{ queue_waiting }}</h2>
+                            <small>tickets in queue</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">In Progress</h5>
+                            <h2 id="queue-in-progress">{{ queue_in_progress }}</h2>
+                            <small>being served</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Completed Today</h5>
+                            <h2 id="completed-today">0</h2>
+                            <small>tickets served</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Avg Wait Time</h5>
+                            <h2 id="avg-wait-time">-</h2>
+                            <small>minutes</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-secondary text-white">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Agent Utilization</h5>
+                            <h2 id="agent-utilization">-</h2>
+                            <small>% active</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-dark text-white">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Avg Service Time</h5>
+                            <h2 id="avg-service-time">-</h2>
+                            <small>minutes</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Stations</h5>
+                            <h2>{{ stations_count }}</h2>
+                            <small>Active stations</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-secondary text-white">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Citizens</h5>
+                            <h2>{{ citizens_count }}</h2>
+                            <small>Registered</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Queue Waiting</h5>
+                            <h2>{{ queue_waiting }}</h2>
+                            <small>In queue</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">In Progress</h5>
+                            <h2>{{ queue_in_progress }}</h2>
+                            <small>Being served</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Agents Overview Section -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5><i class="fas fa-users"></i> Agents Status</h5>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="refreshAgents()">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped" id="agentsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Login ID</th>
+                                            <th>Status</th>
+                                            <th>Active Tickets</th>
+                                            <th>Station</th>
+                                            <th>Last Login</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Agents will be loaded here -->
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">Loading agents...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Tickets Section -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5><i class="fas fa-ticket-alt"></i> Active Tickets</h5>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="refreshTickets()">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                                <a href="{{ url_for('admin.manage_queue') }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-cogs"></i> Manage Queue
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped" id="activeTicketsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Ticket #</th>
+                                            <th>Citizen</th>
+                                            <th>PE Code</th>
+                                            <th>Service</th>
+                                            <th>Priority</th>
+                                            <th>Status</th>
+                                            <th>Wait Time</th>
+                                            <th>Assigned Agent</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if active_tickets %}
+                                            {% for ticket in active_tickets %}
+                                            <tr>
+                                                <td><strong>{{ ticket.ticket_number }}</strong></td>
+                                                <td>{{ ticket.citizen.first_name }} {{ ticket.citizen.last_name }}</td>
+                                                <td>
+                                                    {% if ticket.citizen.pre_enrollment_code %}
+                                                        <span class="badge bg-info">{{ ticket.citizen.pre_enrollment_code }}</span>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ ticket.service_type.name_en if ticket.service_type.name_en else ticket.service_type.name_fr }}</td>
+                                                <td>
+                                                    <span class="badge bg-{% if ticket.priority_score >= 8 %}danger{% elif ticket.priority_score >= 5 %}warning{% else %}info{% endif %}">
+                                                        {{ ticket.priority_score }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-{% if ticket.status == 'in_progress' %}success{% elif ticket.status == 'waiting' %}warning{% else %}secondary{% endif %}">
+                                                        {{ ticket.status|replace('_', ' ')|title }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ ticket.wait_time_display }}</td>
+                                                <td>
+                                                    {% if ticket.assigned_agent %}
+                                                        {{ ticket.assigned_agent.first_name }} {{ ticket.assigned_agent.last_name }}
+                                                    {% else %}
+                                                        <span class="text-muted">Unassigned</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm">
+                                                        {% if ticket.status == 'waiting' %}
+                                                            <button class="btn btn-outline-primary" onclick="assignTicket('{{ ticket.id }}')">
+                                                                <i class="fas fa-user-check"></i>
+                                                            </button>
+                                                        {% elif ticket.assigned_agent %}
+                                                            <button class="btn btn-outline-warning" onclick="unassignTicket('{{ ticket.id }}')">
+                                                                <i class="fas fa-user-times"></i>
+                                                            </button>
+                                                        {% endif %}
+                                                        <button class="btn btn-outline-info" onclick="viewTicketDetails('{{ ticket.id }}')">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        {% else %}
+                                            <tr>
+                                                <td colspan="9" class="text-center text-muted">No active tickets</td>
+                                            </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Alerts -->
+            <div class="card mb-4" id="alerts-section" style="display: none;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Performance Alerts</h5>
+                    <small class="text-muted">Last updated: <span id="alerts-last-update">-</span></small>
+                </div>
+                <div class="card-body">
+                    <div id="alerts-container">
+                        <!-- Alerts will be populated here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Analytics Charts -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-chart-line"></i> Hourly Ticket Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="hourlyChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-chart-pie"></i> Service Type Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="serviceChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Quick Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <a href="{{ url_for('admin.create_agent') }}" class="btn btn-primary btn-block mb-2">
+                                        <i class="fas fa-user-plus"></i> Add New Agent
+                                    </a>
+                                </div>
+                                <div class="col-md-3">
+                                    <a href="{{ url_for('admin.create_service_type') }}" class="btn btn-success btn-block mb-2">
+                                        <i class="fas fa-plus"></i> Add Service Type
+                                    </a>
+                                </div>
+                                <div class="col-md-3">
+                                    <a href="{{ url_for('admin.create_station') }}" class="btn btn-info btn-block mb-2">
+                                        <i class="fas fa-map-marker-alt"></i> Add Station
+                                    </a>
+                                </div>
+                                <div class="col-md-3">
+                                    <a href="{{ url_for('admin.system_reports') }}" class="btn btn-warning btn-block mb-2">
+                                        <i class="fas fa-chart-bar"></i> View Reports
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Agents Table -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Agent Status & Performance</h5>
+                    <a href="{{ url_for('admin.manage_agents') }}" class="btn btn-sm btn-outline-primary">Manage All Agents</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Agent</th>
+                                    <th>Status</th>
+                                    <th>Role</th>
+                                    <th>Served Today</th>
+                                    <th>Avg. Service Time (min)</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for agent in agents %}
+                                <tr>
+                                    <td>{{ agent.first_name }} {{ agent.last_name }}</td>
+                                    <td><span class="badge bg-secondary">{{ agent.status|capitalize }}</span></td>
+                                    <td>{{ agent.role|capitalize }}</td>
+                                    <td>{{ agent.served_today }}</td>
+                                    <td>{{ agent.avg_service_time }}</td>
+                                    <td>
+                                        <a href="{{ url_for('admin.edit_agent', agent_id=agent.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function() {
+            fetch('/auth/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+        });
+    }
+    
+    // Auto-refresh active tickets every 30 seconds
+    setInterval(refreshTickets, 30000);
+});
+
+// Function to refresh active tickets
+function refreshTickets() {
+    fetch('/admin/api/refresh_tickets', {
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const tbody = document.querySelector('#activeTicketsTable tbody');
+            if (data.tickets && data.tickets.length > 0) {
+                tbody.innerHTML = data.tickets.map(ticket => `
+                    <tr>
+                        <td><strong>${ticket.ticket_number}</strong></td>
+                        <td>${ticket.citizen_name}</td>
+                        <td>
+                            ${ticket.pe_code ? `<span class="badge bg-info">${ticket.pe_code}</span>` : '<span class="text-muted">-</span>'}
+                        </td>
+                        <td>${ticket.service_name}</td>
+                        <td>
+                            <span class="badge bg-${ticket.priority_score >= 8 ? 'danger' : ticket.priority_score >= 5 ? 'warning' : 'info'}">
+                                ${ticket.priority_score}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-${ticket.status === 'in_progress' ? 'success' : ticket.status === 'waiting' ? 'warning' : 'secondary'}">
+                                ${ticket.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </span>
+                        </td>
+                        <td>${ticket.wait_time_display}</td>
+                        <td>${ticket.assigned_agent || '<span class="text-muted">Unassigned</span>'}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                ${ticket.status === 'waiting' ? `
+                                    <button class="btn btn-outline-primary" onclick="assignTicket('${ticket.id}')">
+                                        <i class="fas fa-user-check"></i>
+                                    </button>
+                                ` : ticket.assigned_agent ? `
+                                    <button class="btn btn-outline-warning" onclick="unassignTicket('${ticket.id}')">
+                                        <i class="fas fa-user-times"></i>
+                                    </button>
+                                ` : ''}
+                                <button class="btn btn-outline-info" onclick="viewTicketDetails('${ticket.id}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No active tickets</td></tr>';
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing tickets:', error);
+            showToast('Error refreshing tickets', 'error');
+        });
+}
+
+// Function to refresh agents data
+function refreshAgents() {
+    fetch('/admin/api/agents/list', {
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const tbody = document.querySelector('#agentsTable tbody');
+        if (data.success && data.agents && data.agents.length > 0) {
+            tbody.innerHTML = data.agents.map(agent => `
+                <tr>
+                    <td><strong>${agent.name}</strong></td>
+                    <td><code>${agent.employee_id}</code></td>
+                    <td>
+                        <span class="badge bg-${getAgentStatusColor(agent.status)}">
+                            ${agent.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-${agent.active_tickets > 0 ? 'warning' : 'secondary'}">
+                            ${agent.active_tickets + agent.waiting_tickets} total
+                        </span>
+                    </td>
+                    <td>${agent.current_station_id || 'Not assigned'}</td>
+                    <td>${agent.login_time ? new Date(agent.login_time).toLocaleString() : 'Never'}</td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No agents found</td></tr>';
+        }
+    })
+    .catch(error => {
+        console.error('Error refreshing agents:', error);
+        const tbody = document.querySelector('#agentsTable tbody');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading agents</td></tr>';
+    });
+}
+
+// Helper function for agent status colors
+function getAgentStatusColor(status) {
+    switch(status) {
+        case 'available': return 'success';
+        case 'busy': return 'warning';
+        case 'on_break': return 'info';
+        case 'break': return 'info';
+        case 'offline': return 'secondary';
+        default: return 'secondary';
+    }
+}
+
+// Load agents on page load
+document.addEventListener('DOMContentLoaded', function() {
+    refreshAgents();
+});
+
+// Function to get CSRF token
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+// Function to assign ticket to agent
+function assignTicket(ticketId) {
+    if (confirm('Assign this ticket to an available agent?')) {
+        console.log('Attempting to assign ticket:', ticketId);
+        fetch(`/admin/api/assign_ticket/${ticketId}`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({})  // Send empty body for auto-assignment
+        })
+        .then(response => {
+            console.log('Assignment response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Assignment response data:', data);
+            if (data.success) {
+                showToast(data.message, 'success');
+                refreshTickets();
+            } else {
+                showToast(data.message || 'Assignment failed', 'error');
+                console.error('Assignment failed:', data);
+            }
+        })
+        .catch(error => {
+            console.error('Error assigning ticket:', error);
+            showToast('Error assigning ticket: ' + error.message, 'error');
+        });
+    }
+}
+
+// Function to unassign ticket from agent
+function unassignTicket(ticketId) {
+    if (confirm('Unassign this ticket from the agent? It will return to waiting status.')) {
+        console.log('Attempting to unassign ticket:', ticketId);
+        fetch(`/admin/api/unassign_ticket/${ticketId}`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            console.log('Unassign response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Unassign response data:', data);
+            if (data.success) {
+                showToast(data.message, 'success');
+                refreshTickets();
+                refreshAgents(); // Also refresh agents to update their ticket counts
+            } else {
+                showToast(data.message || 'Unassignment failed', 'error');
+                console.error('Unassignment failed:', data);
+            }
+        })
+        .catch(error => {
+            console.error('Error unassigning ticket:', error);
+            showToast('Error unassigning ticket: ' + error.message, 'error');
+        });
+    }
+}
+
+// Function to view ticket details
+function viewTicketDetails(ticketId) {
+    fetch(`/admin/api/queue/${ticketId}/details`, {
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(ticket => {
+            const modalContent = `
+                <div class="modal fade" id="ticketDetailsModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Ticket Details - ${ticket.ticket_number}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Citizen:</strong><br>
+                                        ${ticket.citizen.name}<br>
+                                        <small class="text-muted">${ticket.citizen.enrollment_code}</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Service:</strong><br>
+                                        ${ticket.service_type}
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Priority Score:</strong><br>
+                                        <span class="badge bg-${ticket.priority_score >= 8 ? 'danger' : ticket.priority_score >= 5 ? 'warning' : 'info'}">
+                                            ${ticket.priority_score}
+                                        </span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Status:</strong><br>
+                                        <span class="badge bg-${ticket.status === 'in_progress' ? 'success' : ticket.status === 'waiting' ? 'warning' : 'secondary'}">
+                                            ${ticket.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        </span>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Created:</strong><br>
+                                        ${ticket.created_at ? new Date(ticket.created_at).toLocaleString() : 'N/A'}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Assigned Agent:</strong><br>
+                                        ${ticket.assigned_agent ? ticket.assigned_agent.name : '<span class="text-muted">Unassigned</span>'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('ticketDetailsModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add new modal to body
+            document.body.insertAdjacentHTML('beforeend', modalContent);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('ticketDetailsModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error fetching ticket details:', error);
+            showToast('Error fetching ticket details', 'error');
+        });
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container') || createToastContainer();
+    const toastId = 'toast-' + Date.now();
+    const bgClass = type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : 'bg-info';
+    
+    const toastHtml = `
+        <div id="${toastId}" class="toast ${bgClass} text-white" role="alert">
+            <div class="toast-body">
+                ${message}
+            </div>
+        </div>
+    `;
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+    toast.show();
+    
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1055';
+    document.body.appendChild(container);
+    return container;
+}
+
+// Global variables
+let hourlyChart, serviceChart;
+let socket;
+
+// Initialize charts
+function initializeCharts() {
+    // Hourly distribution chart
+    const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+    hourlyChart = new Chart(hourlyCtx, {
+        type: 'line',
+        data: {
+            labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+            datasets: [{
+                label: 'Tickets per Hour',
+                data: new Array(24).fill(0),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // Service type distribution chart
+    const serviceCtx = document.getElementById('serviceChart').getContext('2d');
+    serviceChart = new Chart(serviceCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [],
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    '#FF6384',
+                    '#36A2EB',
+                    '#FFCE56',
+                    '#4BC0C0',
+                    '#9966FF',
+                    '#FF9F40'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+// Fetch and update dashboard metrics
+async function updateDashboardMetrics() {
+    try {
+        const response = await fetch('/admin/api/metrics/dashboard');
+        const data = await response.json();
+        
+        if (data.success) {
+            updateMetricsCards(data.data.current_metrics);
+            updateCharts(data.data);
+            updateAlerts(data.data.alerts);
+        } else {
+            console.error('Failed to fetch metrics:', data.error);
+        }
+    } catch (error) {
+        console.error('Error fetching dashboard metrics:', error);
+    }
+}
+
+// Update metrics cards
+function updateMetricsCards(metrics) {
+    document.getElementById('queue-waiting').textContent = metrics.queue_waiting || 0;
+    document.getElementById('queue-in-progress').textContent = metrics.queue_in_progress || 0;
+    document.getElementById('completed-today').textContent = metrics.queue_completed_today || 0;
+    document.getElementById('avg-wait-time').textContent = metrics.average_wait_time || '-';
+    document.getElementById('agent-utilization').textContent = metrics.agent_utilization ? `${metrics.agent_utilization}%` : '-';
+    document.getElementById('avg-service-time').textContent = metrics.average_service_time || '-';
+}
+
+// Update charts with new data
+function updateCharts(data) {
+    // Update hourly chart
+    if (data.hourly_distribution && hourlyChart) {
+        const hourlyData = new Array(24).fill(0);
+        data.hourly_distribution.forEach(item => {
+            hourlyData[item.hour] = item.tickets;
+        });
+        hourlyChart.data.datasets[0].data = hourlyData;
+        hourlyChart.update();
+    }
+    
+    // Update service distribution chart
+    if (data.service_distribution && serviceChart) {
+        const labels = Object.keys(data.service_distribution);
+        const values = Object.values(data.service_distribution);
+        
+        serviceChart.data.labels = labels;
+        serviceChart.data.datasets[0].data = values;
+        serviceChart.update();
+    }
+}
+
+// Update alerts section
+function updateAlerts(alerts) {
+    const alertsSection = document.getElementById('alerts-section');
+    const alertsContainer = document.getElementById('alerts-container');
+    const lastUpdate = document.getElementById('alerts-last-update');
+    
+    if (alerts && alerts.length > 0) {
+        alertsSection.style.display = 'block';
+        alertsContainer.innerHTML = '';
+        
+        alerts.forEach(alert => {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${alert.type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                <i class="fas fa-${getAlertIcon(alert.type)}"></i>
+                ${alert.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alertsContainer.appendChild(alertDiv);
+        });
+        
+        lastUpdate.textContent = new Date().toLocaleTimeString();
+    } else {
+        alertsSection.style.display = 'none';
+    }
+}
+
+// Get alert icon based on type
+function getAlertIcon(type) {
+    switch(type) {
+        case 'danger': return 'exclamation-circle';
+        case 'warning': return 'exclamation-triangle';
+        case 'info': return 'info-circle';
+        default: return 'bell';
+    }
+}
+
+// Initialize WebSocket connection
+function initializeWebSocket() {
+    socket = io();
+    
+    socket.on('connect', function() {
+        console.log('Connected to WebSocket');
+    });
+    
+    socket.on('queue_update', function(data) {
+        console.log('Queue update received:', data);
+        updateDashboardMetrics();
+    });
+    
+    socket.on('metrics_update', function(data) {
+        console.log('Metrics update received:', data);
+        if (data.metrics) {
+            updateMetricsCards(data.metrics);
+        }
+    });
+    
+    socket.on('agent_status_update', function(data) {
+        console.log('Agent status update received:', data);
+        updateDashboardMetrics();
+    });
+}
+
+// Form validation and error handling
+function validateForm(formElement) {
+    const requiredFields = formElement.querySelectorAll('[required]');
+    let isValid = true;
+    const errors = [];
+    
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            isValid = false;
+            field.classList.add('is-invalid');
+            errors.push(`${field.getAttribute('data-label') || field.name || 'Field'} is required`);
+        } else {
+            field.classList.remove('is-invalid');
+            field.classList.add('is-valid');
+        }
+    });
+    
+    // Email validation
+    const emailFields = formElement.querySelectorAll('input[type="email"]');
+    emailFields.forEach(field => {
+        if (field.value && !isValidEmail(field.value)) {
+            isValid = false;
+            field.classList.add('is-invalid');
+            errors.push('Please enter a valid email address');
+        }
+    });
+    
+    // Phone validation
+    const phoneFields = formElement.querySelectorAll('input[type="tel"]');
+    phoneFields.forEach(field => {
+        if (field.value && !isValidPhone(field.value)) {
+            isValid = false;
+            field.classList.add('is-invalid');
+            errors.push('Please enter a valid phone number');
+        }
+    });
+    
+    return { isValid, errors };
+}
+
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+function isValidPhone(phone) {
+    const phoneRegex = /^[\+]?[1-9][\d]{0,2}[\s\-]?[\(]?[\d]{1,3}[\)]?[\s\-]?[\d]{3,4}[\s\-]?[\d]{3,4}$/;
+    return phoneRegex.test(phone.replace(/\s/g, ''));
+}
+
+function handleFormSubmission(formElement, endpoint, method = 'POST') {
+    const validation = validateForm(formElement);
+    
+    if (!validation.isValid) {
+        showToast(validation.errors.join('<br>'), 'error');
+        return false;
+    }
+    
+    const submitBtn = formElement.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.setAttribute('data-original-text', submitBtn.innerHTML);
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        submitBtn.disabled = true;
+    }
+    
+    const formData = new FormData(formElement);
+    const jsonData = Object.fromEntries(formData.entries());
+    
+    fetch(endpoint, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(jsonData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showToast(data.message || 'Operation completed successfully', 'success');
+            formElement.reset();
+            // Remove validation classes
+            formElement.querySelectorAll('.is-valid, .is-invalid').forEach(field => {
+                field.classList.remove('is-valid', 'is-invalid');
+            });
+        } else {
+            const errorMsg = data.error_code ? `${data.message} (${data.error_code})` : data.message;
+            showToast(errorMsg, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Form submission error:', error);
+        showToast('Unable to submit form. Please check your connection and try again.', 'error');
+    })
+    .finally(() => {
+        if (submitBtn) {
+            submitBtn.innerHTML = submitBtn.getAttribute('data-original-text');
+            submitBtn.disabled = false;
+        }
+    });
+    
+    return false; // Prevent default form submission
+}
+
+        function viewDetails(ticketId) {
+    fetch(`/admin/api/queue/${ticketId}/details`, {
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showToast(data.error, 'error');
+            return;
+        }
+        // Populate the modal with ticket details
+        document.getElementById('modalTicketNumber').textContent = data.ticket_number;
+        document.getElementById('modalCitizenName').textContent = data.citizen_name;
+        document.getElementById('modalServiceType').textContent = data.service_type;
+        document.getElementById('modalStatus').textContent = data.status;
+        document.getElementById('modalCreatedAt').textContent = data.created_at;
+        document.getElementById('modalWaitTime').textContent = data.wait_time;
+
+        // Show the modal
+        var modal = new bootstrap.Modal(document.getElementById('ticketDetailsModal'));
+        modal.show();
+    })
+    .catch(error => {
+        console.error('Error fetching ticket details:', error);
+        showToast('An error occurred while fetching ticket details.', 'error');
+    });
+}
+
+function refreshQueue() {
+    refreshTickets();
+}
+
+function optimizeQueue() {
+    showToast('Optimizing queue...', 'info');
+    fetch('/admin/api/queue/optimize', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message || 'Queue optimization started.', 'success');
+            refreshTickets();
+        } else {
+            showToast(data.message || 'Failed to optimize queue.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error optimizing queue:', error);
+        showToast('An error occurred while optimizing the queue.', 'error');
+    });
+}
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+    updateDashboardMetrics();
+    initializeWebSocket();
+    refreshTickets();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+        updateDashboardMetrics();
+        refreshTickets();
+    }, 30000);
+    
+    // Add form validation listeners
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const endpoint = this.getAttribute('action') || '/admin/api/form_submit';
+            const method = this.getAttribute('method') || 'POST';
+            handleFormSubmission(this, endpoint, method);
+        });
+        
+        // Real-time validation
+        form.querySelectorAll('input, select, textarea').forEach(field => {
+            field.addEventListener('blur', function() {
+                if (this.hasAttribute('required') && !this.value.trim()) {
+                    this.classList.add('is-invalid');
+                } else {
+                    this.classList.remove('is-invalid');
+                    if (this.value.trim()) {
+                        this.classList.add('is-valid');
+                    }
+                }
+            });
+        });
+    });
+});
+                </script>
+{% endblock %}

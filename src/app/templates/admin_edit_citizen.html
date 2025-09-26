@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - CNI Queue Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="{{ url_for('admin.admin_dashboard') }}">
+                    <i class="fas fa-cogs me-2"></i>CNI Admin
+                </a>
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="{{ url_for('admin.admin_dashboard') }}">Dashboard</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_agents') }}">Agents</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_service_types') }}">Service Types</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_stations') }}">Stations</a>
+                    <a class="nav-link active" href="{{ url_for('admin.manage_citizens') }}">Citizens</a>
+                    <a class="nav-link" href="{{ url_for('admin.manage_queue') }}">Queue</a>
+                    <a class="nav-link" href="{{ url_for('admin.system_reports') }}">Reports</a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h4><i class="fas fa-user-edit me-2"></i>Edit Citizen: {{ citizen.first_name }} {{ citizen.last_name }}</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="editCitizenForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="pre_enrollment_code" class="form-label">Pre-enrollment Code *</label>
+                                        <input type="text" class="form-control" id="pre_enrollment_code" name="pre_enrollment_code" value="{{ citizen.pre_enrollment_code }}" required>
+                                        <small class="form-text text-muted">Unique code for citizen identification</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="date_of_birth" class="form-label">Date of Birth *</label>
+                                        <input type="date" class="form-control" id="date_of_birth" name="date_of_birth" value="{{ citizen.date_of_birth.strftime('%Y-%m-%d') if citizen.date_of_birth else '' }}" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="first_name" class="form-label">First Name *</label>
+                                        <input type="text" class="form-control" id="first_name" name="first_name" value="{{ citizen.first_name }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="last_name" class="form-label">Last Name *</label>
+                                        <input type="text" class="form-control" id="last_name" name="last_name" value="{{ citizen.last_name }}" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="phone_number" class="form-label">Phone Number</label>
+                                        <input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ citizen.phone_number or '' }}" placeholder="+1234567890">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="email" name="email" value="{{ citizen.email or '' }}" placeholder="citizen@example.com">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="preferred_language" class="form-label">Preferred Language</label>
+                                <select class="form-control" id="preferred_language" name="preferred_language">
+                                    <option value="fr" {% if citizen.preferred_language == 'fr' %}selected{% endif %}>French</option>
+                                    <option value="en" {% if citizen.preferred_language == 'en' %}selected{% endif %}>English</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="special_needs" class="form-label">Special Needs</label>
+                                <textarea class="form-control" id="special_needs" name="special_needs" rows="3" placeholder="Describe any special needs or accommodations required">{{ citizen.special_needs or '' }}</textarea>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ url_for('admin.manage_citizens') }}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Update Citizen
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.getElementById('editCitizenForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                pre_enrollment_code: document.getElementById('pre_enrollment_code').value,
+                first_name: document.getElementById('first_name').value,
+                last_name: document.getElementById('last_name').value,
+                date_of_birth: document.getElementById('date_of_birth').value,
+                phone_number: document.getElementById('phone_number').value,
+                email: document.getElementById('email').value,
+                preferred_language: document.getElementById('preferred_language').value,
+                special_needs: document.getElementById('special_needs').value
+            };
+            
+            try {
+                const response = await fetch("{{ url_for('admin.edit_citizen', id=citizen.id) }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Citizen updated successfully!');
+                    window.location.href = "{{ url_for('admin.manage_citizens') }}";
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while updating the citizen.');
+            }
+        });
+    </script>
+</body>
+</html>

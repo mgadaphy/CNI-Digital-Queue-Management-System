@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Priority Algorithms - CNI Queue Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e1e5e9;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #4f46e5;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: -30px -30px 40px -30px;
+            padding: 40px 30px 30px 30px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1em;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e0e0e0;
+        }
+
+        .card h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+        }
+
+        .card h3::before {
+            content: '🔧';
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        .algorithm-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .algorithm-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .algorithm-info {
+            flex: 1;
+        }
+
+        .algorithm-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .algorithm-description {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .algorithm-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 25px;
+            background: #ccc;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #667eea;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 21px;
+            height: 21px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(25px);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: #ffffff;
+            color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e1e5e9;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+            transform: translateY(-2px);
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .simulation-results {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .recommendation {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Advanced Priority Algorithms</h1>
+            <p>Intelligent Queue Management with Machine Learning and Optimization</p>
+        </div>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="loadAlgorithms()">
+                🔄 Refresh Data
+            </button>
+            <button class="btn btn-success" onclick="optimizeQueue()">
+                ⚡ Optimize Queue
+            </button>
+            <button class="btn btn-warning" onclick="reorderQueue()">
+                🔀 Reorder Queue
+            </button>
+            <button class="btn btn-info" onclick="runSimulation()">
+                🧪 Run Simulation
+            </button>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>Available Algorithms</h3>
+                <div id="algorithmList" class="algorithm-list">
+                    <div class="loading"></div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="saveConfiguration()">
+                        💾 Save Configuration
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Performance Metrics</h3>
+                <div id="metricsContainer" class="metrics-grid">
+                    <div class="loading"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Current Queue Statistics</h3>
+            <div id="queueStats" class="metrics-grid">
+                <div class="loading"></div>
+            </div>
+        </div>
+
+        <div id="simulationResults" class="simulation-results">
+            <h3>Simulation Results</h3>
+            <div id="simulationContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let algorithms = [];
+        let activeAlgorithms = [];
+
+        // Load algorithms on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAlgorithms();
+            loadMetrics();
+        });
+
+        async function loadAlgorithms() {
+            try {
+                showStatus('Loading algorithms...', 'info');
+                const response = await fetch('/api/advanced-priority/algorithms');
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    algorithms = data.data.available_algorithms;
+                    activeAlgorithms = data.data.active_algorithms;
+                    renderAlgorithms();
+                    showStatus('Algorithms loaded successfully', 'success');
+                } else {
+                    showStatus('Failed to load algorithms: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showStatus('Error loading algorithms: ' + error.message, 'error');
+            }
+        }
+
+        function renderAlgorithms() {
+            const container = document.getElementById('algorithmList');
+            container.innerHTML = '';
+
+            algorithms.forEach(algorithm => {
+                const isActive = activeAlgorithms.includes(algorithm.type);
+                const item = document.createElement('div');
+                item.className = 'algorithm-item';
+                item.innerHTML = `
+                    <div class="algorithm-info">
+                        <div class="algorithm-name">${algorithm.name}</div>
+                        <div class="algorithm-description">${algorithm.description}</div>
+                    </div>
+                    <div class="algorithm-status">
+                        <span class="status-badge ${isActive ? 'status-active' : 'status-inactive'}">
+                            ${isActive ? 'Active' : 'Inactive'}
+                        </span>
+                        <div class="toggle-switch ${isActive ? 'active' : ''}" 
+                             onclick="toggleAlgorithm('${algorithm.type}')">
+                        </div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function toggleAlgorithm(algorithmType) {
+            const index = activeAlgorithms.indexOf(algorithmType);
+            if (index > -1) {
+                activeAlgorithms.splice(index, 1);
+            } else {
+                activeAlgorithms.push(algorithmType);
+            }
+            renderAlgorithms();
+        }
+
+        async function saveConfiguration() {
+            try {
+                showStatus('Saving configuration...', 'info');
+                const response = await fetch('/api/advanced-priority/algorithms/configure', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        algorithms: activeAlgorithms
+                    })
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    showStatus('Configuration saved successfully', 'success');
+                    loadMetrics(); // Refresh metrics
+                } else {
+                    showStatus('Failed to save configuration: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showStatus('Error saving configuration: ' + error.message, 'error');
+            }
+        }
+
+        async function loadMetrics() {
+            try {
+                const response = await fetch('/api/advanced-priority/metrics');
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    renderMetrics(data.data.algorithm_metrics);
+                    renderQueueStats(data.data.current_statistics);
+                }
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+            }
+        }
+
+        function renderMetrics(metrics) {
+            const container = document.getElementById('metricsContainer');
+            container.innerHTML = '';
+
+            // Calculate average metrics
+            const avgMetrics = calculateAverageMetrics(metrics);
+
+            const metricCards = [
+                { label: 'Avg Wait Time', value: avgMetrics.avgWaitTime.toFixed(1) + 'm', color: '#667eea' },
+                { label: 'Fairness Index', value: avgMetrics.fairnessIndex.toFixed(2), color: '#28a745' },
+                { label: 'Throughput', value: (avgMetrics.throughput * 100).toFixed(1) + '%', color: '#ffc107' },
+                { label: 'Satisfaction', value: avgMetrics.satisfactionScore.toFixed(1) + '/5', color: '#17a2b8' }
+            ];
+
+            metricCards.forEach(metric => {
+                const card = document.createElement('div');
+                card.className = 'metric-card';
+                card.style.borderLeftColor = metric.color;
+                card.style.borderLeftWidth = '4px';
+                card.innerHTML = `
+                    <div class="metric-value" style="color: ${metric.color}; font-weight: bold;">${metric.value}</div>
+                    <div class="metric-label">${metric.label}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderQueueStats(stats) {
+            const container = document.getElementById('queueStats');
+            container.innerHTML = '';
+
+            const statCards = [
+                { label: 'Waiting', value: stats.total_waiting, color: '#dc3545' },
+                { label: 'In Service', value: stats.total_in_service, color: '#ffc107' },
+                { label: 'Completed Today', value: stats.total_completed_today, color: '#28a745' }
+            ];
+
+            statCards.forEach(stat => {
+                const card = document.createElement('div');
+                card.className = 'metric-card';
+                card.style.borderLeftColor = stat.color;
+                card.style.borderLeftWidth = '4px';
+                card.innerHTML = `
+                    <div class="metric-value" style="color: ${stat.color}; font-weight: bold;">${stat.value}</div>
+                    <div class="metric-label">${stat.label}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function calculateAverageMetrics(metrics) {
+            const values = Object.values(metrics);
+            if (values.length === 0) {
+                return {
+                    avgWaitTime: 0,
+                    fairnessIndex: 0,
+                    throughput: 0,
+                    satisfactionScore: 0
+                };
+            }
+
+            return {
+                avgWaitTime: values.reduce((sum, m) => sum + m.average_wait_time, 0) / values.length,
+                fairnessIndex: values.reduce((sum, m) => sum + m.fairness_index, 0) / values.length,
+                throughput: values.reduce((sum, m) => sum + m.throughput, 0) / values.length,
+                satisfactionScore: values.reduce((sum, m) => sum + m.satisfaction_score, 0) / values.length
+            };
+        }
+
+        async function optimizeQueue() {
+            try {
+                showStatus('Optimizing queue...', 'info');
+                const response = await fetch('/api/advanced-priority/optimize', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    showStatus('Queue optimization completed successfully', 'success');
+                    loadMetrics(); // Refresh metrics
+                } else {
+                    showStatus('Optimization failed: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showStatus('Error during optimization: ' + error.message, 'error');
+            }
+        }
+
+        async function reorderQueue() {
+            try {
+                showStatus('Reordering queue...', 'info');
+                const response = await fetch('/api/advanced-priority/queue/reorder', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    showStatus(`Queue reordered: ${data.reordered_count} items affected`, 'success');
+                    loadMetrics(); // Refresh metrics
+                } else {
+                    showStatus('Reordering failed: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showStatus('Error during reordering: ' + error.message, 'error');
+            }
+        }
+
+        async function runSimulation() {
+            try {
+                showStatus('Running simulation...', 'info');
+                const response = await fetch('/api/advanced-priority/simulate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        algorithms: activeAlgorithms,
+                        duration_minutes: 60
+                    })
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    showStatus('Simulation completed successfully', 'success');
+                    renderSimulationResults(data.data);
+                } else {
+                    showStatus('Simulation failed: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showStatus('Error during simulation: ' + error.message, 'error');
+            }
+        }
+
+        function renderSimulationResults(results) {
+            const container = document.getElementById('simulationResults');
+            const content = document.getElementById('simulationContent');
+            
+            content.innerHTML = `
+                <div class="metrics-grid">
+                    <div class="metric-card" style="border-left: 4px solid #28a745;">
+                        <div class="metric-value" style="color: #28a745; font-weight: bold;">${results.projected_metrics.average_wait_time_reduction}%</div>
+                        <div class="metric-label">Wait Time Reduction</div>
+                    </div>
+                    <div class="metric-card" style="border-left: 4px solid #17a2b8;">
+                        <div class="metric-value" style="color: #17a2b8; font-weight: bold;">${results.projected_metrics.throughput_improvement}%</div>
+                        <div class="metric-label">Throughput Improvement</div>
+                    </div>
+                    <div class="metric-card" style="border-left: 4px solid #ffc107;">
+                        <div class="metric-value" style="color: #ffc107; font-weight: bold;">${results.projected_metrics.fairness_score_improvement}%</div>
+                        <div class="metric-label">Fairness Improvement</div>
+                    </div>
+                    <div class="metric-card" style="border-left: 4px solid #667eea;">
+                        <div class="metric-value" style="color: #667eea; font-weight: bold;">${results.projected_metrics.overall_efficiency_gain}%</div>
+                        <div class="metric-label">Efficiency Gain</div>
+                    </div>
+                </div>
+                <h4>Recommendations:</h4>
+                ${results.recommendations.map(rec => `<div class="recommendation">${rec}</div>`).join('')}
+            `;
+            
+            container.style.display = 'block';
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Auto-refresh metrics every 30 seconds
+        setInterval(loadMetrics, 30000);
+    </script>
+</body>
+</html>
