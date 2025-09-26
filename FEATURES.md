@@ -37,6 +37,7 @@ This document provides a comprehensive overview of all features implemented in t
 - **Pre-Enrollment Integration**: PE code generation and management
 - **Ticket Validation**: Format validation and duplicate prevention
 - **Digital Receipt System**: QR code and digital ticket delivery
+- **Enhanced Status Management**: Four-stage ticket lifecycle with visual indicators
 
 #### Ticket Code Formats:
 - **CR**: Correction tickets (e.g., `CR7226`)
@@ -51,7 +52,15 @@ This document provides a comprehensive overview of all features implemented in t
 - **Example**: `PE-20250109-100432`
 - **Features**: Date-based tracking, sequential numbering
 
+#### Ticket Status Lifecycle:
+- 🟡 **Waiting** (Yellow Badge): Newly created tickets in queue
+- 🔵 **Assigned** (Blue Badge): Tickets assigned to specific agents
+- 🟢 **In Progress** (Green Badge): Currently being served by agent
+- ✅ **Completed** (Green Badge): Service successfully completed
+
 #### Recent Updates:
+- ✅ **NEW**: Added 'assigned' status for better workflow management
+- ✅ **ENHANCED**: Four-stage status lifecycle with visual color coding
 - ✅ Standardized PE code format to `PE-YYYYMMDD-XXXXXX`
 - ✅ Clarified service-specific ticket prefixes
 - ✅ Enhanced code validation and generation logic

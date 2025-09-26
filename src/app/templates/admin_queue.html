@@ -459,6 +459,7 @@ async function cancelEntry(entryId) {
                             <select class="form-select" id="statusFilter" onchange="filterQueue()">
                                 <option value="">All Statuses</option>
                                 <option value="waiting">Waiting</option>
+                                <option value="assigned">Assigned</option>
                                 <option value="in_progress">In Progress</option>
                                 <option value="completed">Completed</option>
                                 <option value="cancelled">Cancelled</option>
@@ -523,7 +524,7 @@ async function cancelEntry(entryId) {
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-{{ 'warning' if entry.status == 'waiting' else 'info' if entry.status == 'in_progress' else 'success' if entry.status == 'completed' else 'dark' }}">
+                                        <span class="badge bg-{{ 'warning' if entry.status == 'waiting' else 'primary' if entry.status == 'assigned' else 'info' if entry.status == 'in_progress' else 'success' if entry.status == 'completed' else 'dark' }}">
                                             {{ entry.status.title() }}
                                         </span>
                                     </td>
@@ -550,15 +551,15 @@ async function cancelEntry(entryId) {
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm" role="group">
-                                            {% if entry.status == 'waiting' %}
+                                            {% if entry.status in ['waiting', 'assigned'] %}
                                                 <button class="btn btn-outline-primary btn-sm" onclick="callNext({{ entry.id }})" title="Call Next">
                                                     <i class="fas fa-play"></i> Call
                                                 </button>
-                                                <button class="btn btn-outline-warning btn-sm" onclick="updatePriority({{ entry.id }})" title="Update Priority">
+                                                <button class="btn btn-outline-warning btn-sm" onclick="increasePriority({{ entry.id }})" title="Increase Priority">
                                                     <i class="fas fa-exclamation"></i> Priority
                                                 </button>
                                             {% endif %}
-                                            {% if entry.status in ['waiting', 'in_progress'] %}
+                                            {% if entry.status in ['waiting', 'assigned', 'in_progress'] %}
                                                 <button class="btn btn-outline-danger btn-sm" onclick="cancelEntry({{ entry.id }})" title="Cancel">
                                                     <i class="fas fa-times"></i> Cancel
                                                 </button>

@@ -177,7 +177,7 @@ class QueueLogger:
             ).count()
             
             waiting_entries = db.session.query(Queue).filter(
-                Queue.status == 'waiting'
+                Queue.status.in_(['waiting', 'assigned'])
             ).count()
             
             in_progress_entries = db.session.query(Queue).filter(

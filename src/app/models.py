@@ -167,7 +167,7 @@ class Queue(db.Model):
     citizen_id = db.Column(db.Integer, db.ForeignKey('citizens.id'), nullable=False)
     service_type_id = db.Column(db.Integer, db.ForeignKey('service_types.id'), nullable=False)
     ticket_number = db.Column(db.String(20), unique=True, nullable=False)
-    status = db.Column(db.String(20), default='waiting', nullable=False) # waiting, called, in_progress, completed, no_show
+    status = db.Column(db.String(20), default='waiting', nullable=False) # waiting, assigned, in_progress, completed, no_show
     priority_score = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

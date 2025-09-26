@@ -138,9 +138,15 @@ CNI-Digital-Queue-Management-System/
 ### Database Schema
 - **Agents**: Staff members and their roles
 - **Citizens**: Registered users and their information
-- **Queue**: Active tickets and their status
+- **Queue**: Active tickets with enhanced 4-stage status lifecycle
 - **Service Types**: Available services and priorities
 - **System Metrics**: Performance and usage statistics
+
+### Ticket Status Management
+- 🟡 **Waiting**: Newly created tickets awaiting assignment
+- 🔵 **Assigned**: Tickets assigned to specific agents
+- 🟢 **In Progress**: Currently being served
+- ✅ **Completed**: Service successfully finished
 
 ### Key Algorithms
 - **Simple Queue Optimizer**: Efficient priority-based ticket assignment

@@ -15,9 +15,10 @@ def agent_dashboard():
     agent = current_user
     
     # Simple approach - get assigned tickets directly
+    # Support both new workflow and legacy tickets for backward compatibility
     assigned_tickets = Queue.query.filter(
         Queue.agent_id == agent.id,
-        Queue.status.in_(['waiting', 'in_progress'])
+        Queue.status.in_(['assigned', 'waiting', 'in_progress'])  # Support all relevant statuses
     ).all()
     
     # Add wait time for each ticket
@@ -39,15 +40,22 @@ def agent_dashboard():
         Queue.status == 'in_progress'
     ).first()
     
-    # Get next citizen (prefer waiting over in_progress)
+    # CRITICAL FIX: Ensure agent status is consistent with tickets
+    if currently_serving and agent.status != 'busy':
+        agent.status = 'busy'
+        db.session.commit()
+    
+    # Get next citizen (prefer assigned/waiting over in_progress)
+    assigned_tickets_list = [t for t in assigned_tickets if t.status == 'assigned']
     waiting_tickets = [t for t in assigned_tickets if t.status == 'waiting']
     in_progress_tickets = [t for t in assigned_tickets if t.status == 'in_progress']
     
     next_citizen = None
-    if waiting_tickets:
+    if assigned_tickets_list:
+        next_citizen = assigned_tickets_list[0]  # Prioritize newly assigned tickets
+    elif waiting_tickets:
         next_citizen = waiting_tickets[0]
-    elif in_progress_tickets:
-        next_citizen = in_progress_tickets[0]
+    # Note: Don't set in_progress tickets as "next" - they should be completed first
     
     # Basic metrics
     today = datetime.utcnow().date()
@@ -85,13 +93,15 @@ def call_next():
     agent = current_user
     
     # Get next assigned ticket
+    # Support both new 'assigned' status and legacy 'waiting' status for backward compatibility
     next_ticket = Queue.query.filter(
         Queue.agent_id == agent.id,
-        Queue.status == 'waiting'
+        Queue.status.in_(['assigned', 'waiting'])  # Support both new and legacy status
     ).order_by(desc(Queue.priority_score), Queue.created_at).first()
     
     if next_ticket:
         next_ticket.status = 'in_progress'
+        next_ticket.called_at = datetime.utcnow()
         next_ticket.updated_at = datetime.utcnow()
         agent.status = 'busy'
         db.session.commit()
@@ -106,10 +116,23 @@ def call_next():
             }
         })
     else:
-        return jsonify({
-            'success': False,
-            'message': 'No tickets assigned to you'
-        }), 400
+        # Check if agent has in_progress tickets that need to be completed first
+        in_progress_count = Queue.query.filter(
+            Queue.agent_id == agent.id,
+            Queue.status == 'in_progress'
+        ).count()
+        
+        if in_progress_count > 0:
+            return jsonify({
+                'success': False,
+                'message': f'You have {in_progress_count} ticket(s) in progress. Please complete them before calling new citizens.',
+                'action_required': 'complete_current'
+            }), 400
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'No tickets assigned to you'
+            }), 400
 
 @agent_bp.route('/complete_service', methods=['POST'])
 @login_required
@@ -187,9 +210,10 @@ def get_assigned_tickets():
     """API endpoint to get agent's assigned tickets"""
     agent = current_user
     
+    # Support both new workflow and legacy tickets for backward compatibility
     assigned_tickets = Queue.query.filter(
         Queue.agent_id == agent.id,
-        Queue.status.in_(['waiting', 'in_progress'])
+        Queue.status.in_(['assigned', 'waiting', 'in_progress'])  # Support all relevant statuses
     ).join(Citizen).join(ServiceType).order_by(
         desc(Queue.priority_score), Queue.created_at
     ).all()
@@ -287,9 +311,10 @@ def agent_dashboard_fixed():
     agent = current_user
     
     # Simple approach - get assigned tickets directly
+    # Support both new workflow and legacy tickets for backward compatibility
     assigned_tickets = Queue.query.filter(
         Queue.agent_id == agent.id,
-        Queue.status.in_(['waiting', 'in_progress'])
+        Queue.status.in_(['assigned', 'waiting', 'in_progress'])  # Support all relevant statuses
     ).all()
     
     # Add wait time for each ticket
@@ -310,6 +335,11 @@ def agent_dashboard_fixed():
         Queue.agent_id == agent.id,
         Queue.status == 'in_progress'
     ).first()
+    
+    # CRITICAL FIX: Ensure agent status is consistent with tickets
+    if currently_serving and agent.status != 'busy':
+        agent.status = 'busy'
+        db.session.commit()
     
     # Get next citizen (prefer waiting over in_progress)
     waiting_tickets = [t for t in assigned_tickets if t.status == 'waiting']
@@ -358,19 +388,33 @@ def call_next_citizen():
         agent = current_user
         
         # Get next assigned ticket for this agent
+        # Support both new 'assigned' status and legacy 'waiting' status for backward compatibility
         next_ticket = Queue.query.filter(
             Queue.agent_id == agent.id,
-            Queue.status == 'waiting'
+            Queue.status.in_(['assigned', 'waiting'])  # Support both new and legacy status
         ).order_by(
             desc(Queue.priority_score), 
             Queue.created_at
         ).first()
         
         if not next_ticket:
-            return jsonify({
-                'success': False,
-                'message': 'No tickets assigned to you'
-            }), 400
+            # Check if agent has in_progress tickets that need to be completed first
+            in_progress_count = Queue.query.filter(
+                Queue.agent_id == agent.id,
+                Queue.status == 'in_progress'
+            ).count()
+            
+            if in_progress_count > 0:
+                return jsonify({
+                    'success': False,
+                    'message': f'You have {in_progress_count} ticket(s) in progress. Please complete them before calling new citizens.',
+                    'action_required': 'complete_current'
+                }), 400
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'No tickets assigned to you'
+                }), 400
         
         # Update ticket status
         next_ticket.status = 'in_progress'

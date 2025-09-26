@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2025-09-26
+
+### 🎯 Enhanced Ticket Status Management
+
+#### Added
+- **New 'Assigned' Status**: Introduced intermediate status between 'waiting' and 'in_progress'
+  - **Status Flow**: `waiting` → `assigned` → `in_progress` → `completed`
+  - **Visual Indicators**: Blue badge for assigned tickets in admin interface
+  - **Agent Priority**: Assigned tickets prioritized in "Next Citizen to Call" section
+
+#### Fixed
+- **System-wide Status Synchronization**
+  - Updated admin queue management to include 'assigned' status in filters and displays
+  - Fixed agent dashboard to properly handle assigned tickets in next citizen logic
+  - Updated optimized queries module to include assigned status in all relevant operations
+  - Enhanced performance metrics to track assigned tickets in queue statistics
+  - Fixed queue logger to include assigned tickets in waiting counts
+
+#### Changed
+- **Admin Interface Improvements**
+  - Added "Assigned" option to status filter dropdown
+  - Updated status badge colors: Waiting (Yellow), Assigned (Blue), In Progress (Green), Completed (Green)
+  - Modified action buttons to allow calling and cancelling assigned tickets
+  - Enhanced load balancing to consider assigned tickets in agent workload calculations
+
+- **Agent Dashboard Enhancements**
+  - Prioritizes assigned tickets over waiting tickets for calling
+  - Auto-sets agent status to 'busy' when they have in_progress tickets
+  - Improved error messages for better user guidance
+  - Added backward compatibility for legacy ticket statuses
+
+#### Technical Updates
+- **Database Query Optimization**: All queries updated to include 'assigned' status where appropriate
+- **WebSocket Events**: Enhanced real-time updates to handle assigned status transitions
+- **Performance Metrics**: Updated queue length and wait time calculations to include assigned tickets
+- **Template Updates**: Modified admin and agent templates to display assigned status correctly
+
 ## [1.0.0] - 2025-09-26
 
 ### 🚀 Major System Optimization and Stabilization Release

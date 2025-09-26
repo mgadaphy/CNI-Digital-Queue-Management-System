@@ -101,12 +101,12 @@ class PerformanceMetricsCollector:
             
             # Total queue length
             total_queue = db.session.query(QueueEntry).filter(
-                QueueEntry.status == 'waiting'
+                QueueEntry.status.in_(['waiting', 'assigned'])
             ).count()
             
             # Average wait time for waiting entries
             waiting_entries = db.session.query(QueueEntry).filter(
-                QueueEntry.status == 'waiting'
+                QueueEntry.status.in_(['waiting', 'assigned'])
             ).all()
             
             if waiting_entries:
@@ -143,7 +143,7 @@ class PerformanceMetricsCollector:
                 QueueEntry.priority_score,
                 func.count(QueueEntry.id)
             ).filter(
-                QueueEntry.status == 'waiting'
+                QueueEntry.status.in_(['waiting', 'assigned'])
             ).group_by(QueueEntry.priority_score).all()
             
             priority_distribution = {

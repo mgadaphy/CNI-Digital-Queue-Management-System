@@ -58,7 +58,7 @@ class OptimizedQueueQueries:
                 query = query.filter(Queue.status == status_filter)
             else:
                 # Default to active statuses for performance
-                query = query.filter(Queue.status.in_(['waiting', 'in_progress']))
+                query = query.filter(Queue.status.in_(['waiting', 'assigned', 'in_progress']))
             
             # Order by priority and creation time for consistent results
             query = query.order_by(desc(Queue.priority_score), Queue.created_at)
@@ -129,7 +129,7 @@ class OptimizedQueueQueries:
                 func.avg(
                     func.extract('epoch', func.now() - Queue.created_at) / 60
                 ).label('avg_wait_minutes')
-            ).filter(Queue.status == 'waiting').scalar()
+            ).filter(Queue.status.in_(['waiting', 'assigned'])).scalar()
             
             return {
                 'queue': {
@@ -176,7 +176,7 @@ class OptimizedQueueQueries:
                 joinedload(Queue.service_type)
             ).filter(
                 Queue.agent_id == agent_id,
-                Queue.status.in_(['waiting', 'in_progress'])
+                Queue.status.in_(['assigned', 'waiting', 'in_progress'])
             ).order_by(
                 desc(Queue.priority_score),
                 Queue.created_at
@@ -211,7 +211,7 @@ class OptimizedQueueQueries:
             
             # Count tickets ahead with higher priority or same priority but earlier creation
             position = db.session.query(func.count(Queue.id)).filter(
-                Queue.status == 'waiting',
+                Queue.status.in_(['waiting', 'assigned']),
                 Queue.service_type_id == ticket.service_type_id,
                 or_(
                     Queue.priority_score > ticket.priority_score,
@@ -254,7 +254,7 @@ class OptimizedQueueQueries:
             ).outerjoin(
                 Queue, and_(
                     Queue.service_type_id == ServiceType.id,
-                    Queue.status == 'waiting'
+                    Queue.status.in_(['waiting', 'assigned'])
                 )
             ).group_by(
                 ServiceType.id, ServiceType.code, ServiceType.name_fr

@@ -106,13 +106,17 @@
                                     </td>
                                     <td>{{ ticket.wait_time_display }}</td>
                                     <td>
-                                        <span class="badge bg-{% if ticket.status == 'in_progress' %}success{% elif ticket.status == 'waiting' %}warning{% else %}secondary{% endif %}">
+                                        <span class="badge bg-{% if ticket.status == 'in_progress' %}success{% elif ticket.status == 'assigned' %}primary{% elif ticket.status == 'waiting' %}warning{% else %}secondary{% endif %}">
                                             {{ ticket.status|replace('_', ' ')|title }}
                                         </span>
                                     </td>
                                     <td>
-                                        {% if ticket.status == 'waiting' %}
+                                        {% if ticket.status == 'assigned' %}
                                             <button class="btn btn-sm btn-primary" onclick="callSpecificTicket('{{ ticket.id }}')">
+                                                <i class="fas fa-phone"></i> Call
+                                            </button>
+                                        {% elif ticket.status == 'waiting' %}
+                                            <button class="btn btn-sm btn-outline-primary" onclick="callSpecificTicket('{{ ticket.id }}')">
                                                 <i class="fas fa-phone"></i> Call
                                             </button>
                                         {% elif ticket.status == 'in_progress' %}

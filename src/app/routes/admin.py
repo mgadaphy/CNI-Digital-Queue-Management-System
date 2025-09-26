@@ -230,9 +230,10 @@ def manage_queue():
         error_out=False
     )
     
-    # Get summary statistics for all statuses (cached for performance)
-    queue_stats = {
+    # Quick stats for dashboard
+    stats = {
         'waiting': Queue.query.filter_by(status='waiting').count(),
+        'assigned': Queue.query.filter_by(status='assigned').count(),  # Add assigned status
         'in_progress': Queue.query.filter_by(status='in_progress').count(),
         'completed_today': Queue.query.filter(
             Queue.status == 'completed',
@@ -316,6 +317,7 @@ def get_dashboard_metrics():
         
         # Basic queue metrics
         queue_waiting = Queue.query.filter_by(status='waiting').count()
+        queue_assigned = Queue.query.filter_by(status='assigned').count()  # Add assigned status
         queue_in_progress = Queue.query.filter_by(status='in_progress').count()
         queue_completed_today = Queue.query.filter(
             Queue.status == 'completed',
@@ -414,6 +416,7 @@ def get_dashboard_metrics():
             'data': {
                 'current_metrics': {
                     'queue_waiting': queue_waiting,
+                    'queue_assigned': queue_assigned,  # Add assigned status
                     'queue_in_progress': queue_in_progress,
                     'queue_completed_today': queue_completed_today,
                     'total_agents': total_agents,
@@ -516,7 +519,7 @@ def assign_ticket(ticket_id):
             for agent in available_agents:
                 current_tickets = Queue.query.filter(
                     Queue.agent_id == agent.id,
-                    Queue.status.in_(['waiting', 'in_progress'])
+                    Queue.status.in_(['assigned', 'waiting', 'in_progress'])  # Include assigned status
                 ).count()
                 
                 current_app.logger.info(f"Agent {agent.first_name} {agent.last_name} has {current_tickets} tickets")
@@ -587,7 +590,7 @@ def assign_ticket(ticket_id):
         
         # Update ticket assignment
         ticket.agent_id = agent_id
-        ticket.status = 'in_progress'
+        ticket.status = 'assigned'  # Changed from 'in_progress' to 'assigned'
         ticket.updated_at = datetime.utcnow()
         
         # Commit changes
