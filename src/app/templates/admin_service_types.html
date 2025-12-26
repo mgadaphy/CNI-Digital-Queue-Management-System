@@ -1,22 +1,12 @@
 {% extends "base.html" %}
 
+{% block header %}
+{% include 'admin_nav.html' %}
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
-    <!-- Admin Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
-        <div class="container-fluid">
-            <span class="navbar-brand">Admin Panel</span>
-            <div class="navbar-nav">
-                <a class="nav-link" href="{{ url_for('admin.admin_dashboard') }}">Dashboard</a>
-                <a class="nav-link" href="{{ url_for('admin.manage_agents') }}">Agents</a>
-                <a class="nav-link active" href="{{ url_for('admin.manage_service_types') }}">Service Types</a>
-                <a class="nav-link" href="{{ url_for('admin.manage_stations') }}">Stations</a>
-                <a class="nav-link" href="{{ url_for('admin.manage_citizens') }}">Citizens</a>
-                <a class="nav-link" href="{{ url_for('admin.manage_queue') }}">Queue</a>
-                <a class="nav-link" href="{{ url_for('admin.system_reports') }}">Reports</a>
-            </div>
-        </div>
-    </nav>
+
 
     <div class="row">
         <div class="col-md-12">
@@ -26,7 +16,7 @@
                     <i class="fas fa-plus"></i> Add New Service Type
                 </a>
             </div>
-            
+
             <!-- Service Types Table -->
             <div class="card">
                 <div class="card-header">
@@ -49,20 +39,22 @@
                             <tbody>
                                 {% for service_type in service_types %}
                                 <tr>
-                                    <td><strong>{{ service_type.name_en or service_type.name_fr or 'No name' }}</strong></td>
-                                    <td>{{ service_type.description_en or service_type.description_fr or 'No description' }}</td>
+                                    <td><strong>{{ service_type.name_en or service_type.name_fr or 'No name' }}</strong>
+                                    </td>
+                                    <td>{{ service_type.description_en or service_type.description_fr or 'No
+                                        description' }}</td>
                                     <td>
                                         <span class="badge badge-info">{{ service_type.estimated_duration }} min</span>
                                     </td>
                                     <td>
                                         {% if service_type.priority_level == 1 %}
-                                            <span class="badge badge-success">Low</span>
+                                        <span class="badge badge-success">Low</span>
                                         {% elif service_type.priority_level == 2 %}
-                                            <span class="badge badge-warning">Medium</span>
+                                        <span class="badge badge-warning">Medium</span>
                                         {% elif service_type.priority_level == 3 %}
-                                            <span class="badge badge-danger">High</span>
+                                        <span class="badge badge-danger">High</span>
                                         {% else %}
-                                            <span class="badge badge-dark">{{ service_type.priority_level }}</span>
+                                        <span class="badge badge-dark">{{ service_type.priority_level }}</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -70,15 +62,16 @@
                                             {{ 'Active' if service_type.is_active else 'Inactive' }}
                                         </span>
                                     </td>
-                                    <td>{{ service_type.created_at.strftime('%Y-%m-%d') if service_type.created_at else 'N/A' }}</td>
+                                    <td>{{ service_type.created_at.strftime('%Y-%m-%d') if service_type.created_at else
+                                        'N/A' }}</td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <a href="{{ url_for('admin.edit_service_type', service_type_id=service_type.id) }}" 
-                                               class="btn btn-sm btn-outline-primary">
+                                            <a href="{{ url_for('admin.edit_service_type', service_type_id=service_type.id) }}"
+                                                class="btn btn-sm btn-outline-primary">
                                                 <i class="fas fa-edit"></i> Edit
                                             </a>
-                                            <button class="btn btn-sm btn-outline-danger" 
-                                                    onclick="deleteServiceType({{ service_type.id }}, '{{ service_type.name }}')">
+                                            <button class="btn btn-sm btn-outline-danger"
+                                                onclick="deleteServiceType({{ service_type.id }}, '{{ service_type.name }}')">
                                                 <i class="fas fa-trash"></i> Delete
                                             </button>
                                         </div>
@@ -118,38 +111,38 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
 <script>
-let serviceTypeToDelete = null;
+    let serviceTypeToDelete = null;
 
-function deleteServiceType(serviceTypeId, serviceTypeName) {
-    serviceTypeToDelete = serviceTypeId;
-    document.getElementById('serviceTypeName').textContent = serviceTypeName;
-    new bootstrap.Modal(document.getElementById('deleteModal')).show();
-}
-
-document.getElementById('confirmDelete').addEventListener('click', function() {
-    if (serviceTypeToDelete) {
-        fetch(`/admin/service-types/${serviceTypeToDelete}/delete`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + localStorage.getItem('access_token')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while deleting the service type.');
-        });
-        
-        bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+    function deleteServiceType(serviceTypeId, serviceTypeName) {
+        serviceTypeToDelete = serviceTypeId;
+        document.getElementById('serviceTypeName').textContent = serviceTypeName;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
     }
-});
+
+    document.getElementById('confirmDelete').addEventListener('click', function () {
+        if (serviceTypeToDelete) {
+            fetch(`/admin/service-types/${serviceTypeToDelete}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the service type.');
+                });
+
+            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+        }
+    });
 </script>
 {% endblock %}

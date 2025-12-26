@@ -14,6 +14,10 @@ def agent_dashboard():
     
     agent = current_user
     
+    # Redirect admins to their dashboard
+    if hasattr(agent, 'role') and agent.role == 'admin':
+        return redirect(url_for('admin.admin_dashboard'))
+    
     # Simple approach - get assigned tickets directly
     # Support both new workflow and legacy tickets for backward compatibility
     assigned_tickets = Queue.query.filter(
@@ -65,8 +69,22 @@ def agent_dashboard():
         func.date(Queue.updated_at) == today
     ).count()
     
+    first_day_of_month = today.replace(day=1)
+    citizens_served_month = Queue.query.filter(
+        Queue.agent_id == agent.id,
+        Queue.status == 'completed',
+        func.date(Queue.updated_at) >= first_day_of_month
+    ).count()
+
+    citizens_served_total = Queue.query.filter(
+        Queue.agent_id == agent.id,
+        Queue.status == 'completed'
+    ).count()
+    
     metrics = {
         'citizens_served_today': citizens_served_today,
+        'citizens_served_month': citizens_served_month,
+        'citizens_served_total': citizens_served_total,
         'avg_service_time': 15
     }
     

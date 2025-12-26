@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,21 +26,21 @@
             list-style: none !important;
             background-color: #fff !important;
             background-clip: padding-box !important;
-            border: 1px solid rgba(0,0,0,.15) !important;
+            border: 1px solid rgba(0, 0, 0, .15) !important;
             border-radius: 0.375rem !important;
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175) !important;
         }
-        
+
         .dropdown-menu.show {
             display: block !important;
         }
-        
+
         /* Debug styling to make dropdown more visible */
         .dropdown-menu.show {
             background-color: #ffffff !important;
             border: 2px solid #007bff !important;
         }
-        
+
         .dropdown-item {
             display: block;
             width: 100%;
@@ -53,64 +54,81 @@
             background-color: transparent;
             border: 0;
         }
-        
-        .dropdown-item:hover, .dropdown-item:focus {
+
+        .dropdown-item:hover,
+        .dropdown-item:focus {
             color: #1e2125;
             background-color: #e9ecef;
         }
-        
+
         /* Ensure dropdown toggle has proper cursor */
         .dropdown-toggle {
             cursor: pointer;
         }
     </style>
 </head>
+
 <body>
     <!-- Top Header -->
+    <!-- Top Header -->
+    {% block base_navbar %}
     <header class="top-header">
         <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
             <div class="container-fluid">
-                <a class="navbar-brand" href="{% if current_user and current_user.is_authenticated and current_user.role == 'admin' %}{{ url_for('admin.admin_dashboard') }}{% else %}{{ url_for('agent.agent_dashboard') }}{% endif %}">
+                <a class="navbar-brand"
+                    href="{% if current_user and current_user.is_authenticated and current_user.role == 'admin' %}{{ url_for('admin.admin_dashboard') }}{% else %}{{ url_for('agent.agent_dashboard') }}{% endif %}">
                     <i class="fas fa-building"></i> CNI Queue Management
                 </a>
-                
+
                 <!-- User Profile Section -->
                 <div class="navbar-nav ms-auto">
                     {% if current_user and current_user.is_authenticated %}
                     <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-white" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="true">
+                        <a class="nav-link dropdown-toggle text-white" href="#" id="userDropdown" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="true">
                             <i class="fas fa-user-circle"></i>
                             <span class="ms-1">{{ current_user.first_name }} {{ current_user.last_name }}</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li><h6 class="dropdown-header">
-                                {% if current_user.role %}
+                            <li>
+                                <h6 class="dropdown-header">
+                                    {% if current_user.role %}
                                     {{ current_user.role|title }} Panel
-                                {% else %}
+                                    {% else %}
                                     User Panel
-                                {% endif %}
-                            </h6></li>
-                            <li><hr class="dropdown-divider"></li>
+                                    {% endif %}
+                                </h6>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
                             <li>
                                 {% if current_user.role == 'admin' %}
-                                    <a class="dropdown-item" href="{{ url_for('admin.admin_profile') }}"><i class="fas fa-user"></i> Profile</a>
+                                <a class="dropdown-item" href="{{ url_for('admin.admin_profile') }}"><i
+                                        class="fas fa-user"></i> Profile</a>
                                 {% elif current_user.role == 'agent' %}
-                                    <a class="dropdown-item" href="{{ url_for('agent.agent_profile') }}"><i class="fas fa-user"></i> Profile</a>
+                                <a class="dropdown-item" href="{{ url_for('agent.agent_profile') }}"><i
+                                        class="fas fa-user"></i> Profile</a>
                                 {% else %}
-                                    <a class="dropdown-item" href="#"><i class="fas fa-user"></i> Profile</a>
+                                <a class="dropdown-item" href="#"><i class="fas fa-user"></i> Profile</a>
                                 {% endif %}
                             </li>
                             <li>
                                 {% if current_user.role == 'admin' %}
-                                    <a class="dropdown-item" href="{{ url_for('admin.admin_settings') }}"><i class="fas fa-cog"></i> Settings</a>
+                                <a class="dropdown-item" href="{{ url_for('admin.admin_settings') }}"><i
+                                        class="fas fa-cog"></i> Settings</a>
                                 {% elif current_user.role == 'agent' %}
-                                    <a class="dropdown-item" href="{{ url_for('agent.agent_settings') }}"><i class="fas fa-cog"></i> Settings</a>
+                                <a class="dropdown-item" href="{{ url_for('agent.agent_settings') }}"><i
+                                        class="fas fa-cog"></i> Settings</a>
                                 {% else %}
-                                    <a class="dropdown-item" href="#"><i class="fas fa-cog"></i> Settings</a>
+                                <a class="dropdown-item" href="#"><i class="fas fa-cog"></i> Settings</a>
                                 {% endif %}
                             </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" id="logout-link" onclick="handleLogout(event)"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item text-danger" href="#" id="base-logout-link"
+                                    onclick="handleLogout(event)"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                         </ul>
                     </div>
                     {% else %}
@@ -122,10 +140,11 @@
             </div>
         </nav>
     </header>
-    
+    {% endblock %}
+
     <!-- Additional Header Block for Page-Specific Headers -->
     {% block header %}{% endblock %}
-    
+
     <main class="main-content">
         <div class="container-fluid">
             {% block content %}{% endblock %}
@@ -139,17 +158,17 @@
         // Simplified dropdown initialization - let individual pages handle their own dropdowns
         function initializeDropdowns() {
             console.log('Base template: Checking for dropdown...');
-            
+
             const userDropdown = document.getElementById('userDropdown');
             if (userDropdown) {
                 console.log('Base template: User dropdown found');
-                
+
                 // Check if we're on agent dashboard (it will handle its own dropdown)
                 if (document.body.innerHTML.includes('Agent Dashboard')) {
                     console.log('Base template: Agent dashboard detected, skipping base dropdown init');
                     return;
                 }
-                
+
                 // For admin dashboard and other pages, use Bootstrap
                 try {
                     if (typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
@@ -161,7 +180,7 @@
                 } catch (error) {
                     console.warn('Base template: Bootstrap failed, using manual fallback');
                     // Manual fallback
-                    userDropdown.addEventListener('click', function(e) {
+                    userDropdown.addEventListener('click', function (e) {
                         e.preventDefault();
                         e.stopPropagation();
                         const menu = this.nextElementSibling;
@@ -178,10 +197,10 @@
                 console.warn('Base template: User dropdown not found');
             }
         }
-        
+
         // Initialize dropdowns when DOM is ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('DOMContentLoaded', function () {
                 // Delay initialization to ensure all scripts are loaded
                 setTimeout(initializeDropdowns, 100);
                 // Add global click handler
@@ -192,10 +211,10 @@
             setTimeout(initializeDropdowns, 100);
             setTimeout(addGlobalClickHandler, 200);
         }
-        
+
         // Global click handler to close dropdowns when clicking outside
         function addGlobalClickHandler() {
-            document.addEventListener('click', function(e) {
+            document.addEventListener('click', function (e) {
                 // Check if click is outside any dropdown
                 if (!e.target.closest('.dropdown')) {
                     document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
@@ -209,13 +228,16 @@
 
         function handleLogout(event) {
             event.preventDefault();
-            
+
             // Show loading state
-            const logoutLink = document.getElementById('logout-link');
+            // Show loading state
+            // Try to find the logout link that triggered this, or fall back to known IDs
+            const logoutLink = event.currentTarget || document.getElementById('base-logout-link') || document.getElementById('logout-link');
             if (logoutLink) {
+                const originalContent = logoutLink.innerHTML;
                 logoutLink.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging out...';
             }
-            
+
             fetch('{{ url_for("auth.logout") }}', {
                 method: 'POST',
                 headers: {
@@ -223,39 +245,40 @@
                     'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
                 }
             })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    throw new Error('Logout request failed');
-                }
-            })
-            .then(data => {
-                if (data.message === 'Logout successful') {
-                    // Clear any local storage or session data
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    
-                    // Redirect to login page
-                    window.location.href = '{{ url_for("auth.login_page") }}';
-                } else {
-                    alert('Logout failed: ' + (data.message || 'Unknown error'));
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('Logout request failed');
+                    }
+                })
+                .then(data => {
+                    if (data.message === 'Logout successful') {
+                        // Clear any local storage or session data
+                        localStorage.clear();
+                        sessionStorage.clear();
+
+                        // Redirect to login page
+                        window.location.href = '{{ url_for("auth.login_page") }}';
+                    } else {
+                        alert('Logout failed: ' + (data.message || 'Unknown error'));
+                        // Reset button text
+                        if (logoutLink) {
+                            logoutLink.innerHTML = '<i class="fas fa-sign-out-alt"></i> Logout';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                    alert('An error occurred during logout. Please try again.');
                     // Reset button text
                     if (logoutLink) {
                         logoutLink.innerHTML = '<i class="fas fa-sign-out-alt"></i> Logout';
                     }
-                }
-            })
-            .catch(error => {
-                console.error('Logout error:', error);
-                alert('An error occurred during logout. Please try again.');
-                // Reset button text
-                if (logoutLink) {
-                    logoutLink.innerHTML = '<i class="fas fa-sign-out-alt"></i> Logout';
-                }
-            });
+                });
         }
     </script>
     {% endblock %}
 </body>
+
 </html>

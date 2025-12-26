@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, desc
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from ..models import db, Agent, ServiceType, Station, Citizen, Queue
+from ..models import db, Agent, ServiceType, Station, Citizen, Queue, SystemConfig
 from ..queue_logic.simple_optimizer import simple_optimizer
 from .. import socketio
 from ..extensions import csrf
@@ -14,6 +14,8 @@ from ..utils.realtime_sync import emit_queue_update_sync, emit_agent_status_sync
 from functools import wraps
 import traceback
 import logging
+import io
+import csv
 
 # Configure error logging
 logging.basicConfig(level=logging.INFO)
@@ -126,8 +128,21 @@ def admin_dashboard():
         else:
             ticket.wait_time_display = "N/A"
     
-    # Get agent performance data with optimized queries
-    agents = Agent.query.all()
+    # Calculate Average Wait Time (for tickets served today)
+    today = datetime.utcnow().date()
+    # Use called_at for calculation, or fallback to updated_at if called_at is null (though for completed it should exist)
+    avg_wait_seconds = db.session.query(
+        func.avg(func.strftime('%s', Queue.called_at) - func.strftime('%s', Queue.created_at))
+    ).filter(
+        Queue.status == 'completed',
+        Queue.called_at.isnot(None),
+        func.date(Queue.updated_at) == today
+    ).scalar()
+    
+    avg_wait_time = round(avg_wait_seconds / 60) if avg_wait_seconds else 0
+
+    # Get agent performance data with optimized queries (Filter out admins, limit 10)
+    agents = Agent.query.filter(Agent.role != 'admin').limit(10).all()
     for agent in agents:
         # Use optimized performance metrics
         performance = query_optimizer.queue_queries.get_agent_performance_metrics(agent.id, days=1)
@@ -143,13 +158,15 @@ def admin_dashboard():
                          queue_in_progress=queue_stats.get('in_progress', 0),
                          active_tickets=active_tickets,
                          agents=agents,
+                         avg_wait_time=avg_wait_time,
                          title='Admin Dashboard - CNI Digital Queue')
 
 @admin_bp.route('/manage_agents')
 @login_required
 def manage_agents():
     """Manage agents page"""
-    agents = Agent.query.all()
+    # Filter out admin users from agent management list
+    agents = Agent.query.filter(Agent.role != 'admin').all()
     return render_template('admin_agents.html', agents=agents)
 
 @admin_bp.route('/create_agent')
@@ -202,8 +219,15 @@ def edit_station(station_id):
 @login_required
 def manage_citizens():
     """Manage citizens page"""
-    citizens = Citizen.query.all()
-    return render_template('admin_citizens.html', citizens=citizens)
+    citizens = Citizen.query.order_by(desc(Citizen.created_at)).all()
+    
+    # Calculate stats
+    today = datetime.utcnow().date()
+    today_registrations = Citizen.query.filter(func.date(Citizen.created_at) == today).count()
+    
+    return render_template('admin_citizens.html', 
+                         citizens=citizens,
+                         today_registrations=today_registrations)
 
 @admin_bp.route('/manage_queue')
 @login_required
@@ -245,20 +269,106 @@ def manage_queue():
     return render_template('admin_queue.html', 
                          queue_entries=queue_entries_paginated.items,
                          pagination=queue_entries_paginated,
-                         queue_stats=queue_stats,
+                         queue_stats=stats,
                          current_status_filter=status_filter)
 
 @admin_bp.route('/system_reports')
 @login_required
 def system_reports():
     """System reports and analytics"""
-    return render_template('admin_reports.html')
+    # Calculate daily statistics for the report view
+    today = datetime.utcnow().date()
+    
+    # Get basic counts
+    total_served = Queue.query.filter(
+        Queue.status == 'completed',
+        func.date(Queue.updated_at) == today
+    ).count()
+    
+    total_waiting = Queue.query.filter_by(status='waiting').count()
+    total_in_progress = Queue.query.filter_by(status='in_progress').count()
+    
+    # Calculate average wait time
+    waiting_tickets = Queue.query.filter(
+        Queue.status.in_(['completed', 'in_progress']),
+        func.date(Queue.updated_at) == today,
+        Queue.wait_time.isnot(None)
+    ).all()
+    
+    total_wait = sum(t.wait_time for t in waiting_tickets)
+    avg_wait = round(total_wait / len(waiting_tickets), 1) if waiting_tickets else 0
+    
+    daily_stats = {
+        'total_served': total_served,
+        'total_waiting': total_waiting,
+        'total_in_progress': total_in_progress,
+        'average_wait_time': avg_wait
+    }
+    
+    return render_template('admin_reports.html', daily_stats=daily_stats)
 
 @admin_bp.route('/profile')
 @login_required
 def admin_profile():
     """Admin profile page"""
     return render_template('admin_profile.html')
+
+@admin_bp.route('/reports/export', methods=['POST'])
+@login_required
+def export_report():
+    """Export report to CSV"""
+    try:
+        data = request.get_json()
+        report_data = data.get('reportData', [])
+        
+        if not report_data:
+            return jsonify({
+                'success': False,
+                'message': 'No data to export'
+            }), 400
+            
+        # Create CSV
+        output = StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow(['Date', 'Citizens Served', 'Avg Wait Time (min)', 'Avg Service Time (min)', 'Peak Hour'])
+        
+        # Write rows
+        for row in report_data:
+            writer.writerow([
+                row.get('date'),
+                row.get('served'),
+                row.get('avgWaitTime'),
+                row.get('avgServiceTime'),
+                row.get('peakHour')
+            ])
+            
+        output.seek(0)
+        
+        # Convert to bytes for download
+        mem = io.BytesIO()
+        mem.write(output.getvalue().encode('utf-8'))
+        mem.seek(0)
+        
+        return send_file(
+            mem,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=f'report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        )
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error exporting report: {str(e)}'
+        }), 500
+
+@admin_bp.route('/settings')
+@login_required
+def admin_settings():
+    """Admin settings page"""
+    return render_template('admin_settings.html')
 
 @admin_bp.route('/profile/update', methods=['POST'])
 @login_required
@@ -296,11 +406,7 @@ def update_admin_profile():
             'message': f'Error updating profile: {str(e)}'
         }), 500
 
-@admin_bp.route('/settings')
-@login_required
-def admin_settings():
-    """Admin settings page"""
-    return render_template('admin_settings.html')
+
 
 @admin_bp.route('/api/metrics/dashboard')
 @login_required
@@ -493,10 +599,11 @@ def assign_ticket(ticket_id):
         if not agent_id:
             current_app.logger.info(f"Auto-assigning ticket {ticket_id} - looking for available agents")
             
-            # Get all available agents
-            available_agents = Agent.query.filter_by(
-                status='available',
-                is_active=True
+            # Get all available agents (excluding admins)
+            available_agents = Agent.query.filter(
+                Agent.status == 'available',
+                Agent.is_active == True,
+                Agent.role != 'admin'
             ).all()
             
             if not available_agents:
@@ -569,6 +676,20 @@ def assign_ticket(ticket_id):
                 'message': f'Agent {agent.first_name} {agent.last_name} is not available (Status: {agent.status})',
                 'error_code': 'AGENT_UNAVAILABLE'
             }), 400
+            
+        # Check system config for auto-assignment if agent_id was auto-selected
+        if not request.json.get('agent_id'):
+            auto_assign_config = SystemConfig.query.get('auto_assign_enabled')
+            if auto_assign_config and auto_assign_config.value == 'false':
+                 return jsonify({
+                    'success': True,
+                    'message': 'Auto-assignment is disabled. Ticket remains in waiting list.',
+                    'ticket': {
+                        'id': ticket.id,
+                        'ticket_number': ticket.ticket_number,
+                        'status': ticket.status
+                    }
+                })
         
         # Check if agent is already handling maximum tickets
         current_tickets = Queue.query.filter_by(
@@ -1413,19 +1534,18 @@ def toggle_station(station_id):
         station = Station.query.get_or_404(station_id)
         
         # Toggle between available and offline
-        if station.status == 'available':
-            station.status = 'offline'
-            message = 'Station set to offline'
-        else:
+        if station.status == 'offline':
             station.status = 'available'
-            message = 'Station set to available'
-        
+            new_status = 'available'
+        else:
+            station.status = 'offline'
+            new_status = 'offline'
+            
         db.session.commit()
         
         return jsonify({
             'success': True,
-            'message': message,
-            'new_status': station.status
+            'message': f'Station status updated to {new_status}'
         })
         
     except Exception as e:
@@ -1435,7 +1555,6 @@ def toggle_station(station_id):
             'message': f'Error toggling station status: {str(e)}'
         }), 500
 
-# Missing Citizen Management Routes
 @admin_bp.route('/citizens/<int:citizen_id>/view')
 @login_required
 def view_citizen(citizen_id):
@@ -1443,12 +1562,34 @@ def view_citizen(citizen_id):
     citizen = Citizen.query.get_or_404(citizen_id)
     return render_template('admin_citizen_view.html', citizen=citizen)
 
-@admin_bp.route('/citizens/<int:citizen_id>/edit')
+@admin_bp.route('/citizens/<int:citizen_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_citizen(citizen_id):
-    """Edit citizen form"""
+    """Edit citizen details"""
     citizen = Citizen.query.get_or_404(citizen_id)
+    
+    if request.method == 'POST':
+        try:
+            # Update logic here
+            data = request.form
+            citizen.first_name = data.get('first_name')
+            citizen.last_name = data.get('last_name')
+            citizen.pre_enrollment_code = data.get('pre_enrollment_code')
+            citizen.date_of_birth = datetime.strptime(data.get('date_of_birth'), '%Y-%m-%d').date() if data.get('date_of_birth') else citizen.date_of_birth
+            citizen.email = data.get('email')
+            citizen.phone = data.get('phone_number')
+            citizen.preferred_language = data.get('preferred_language')
+            citizen.special_needs = data.get('special_needs')
+            
+            db.session.commit()
+            flash('Citizen updated successfully', 'success')
+            return redirect(url_for('admin.manage_citizens'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating citizen: {str(e)}', 'danger')
+            
     return render_template('admin_edit_citizen.html', citizen=citizen)
+
 
 @admin_bp.route('/citizens/<int:citizen_id>/history')
 @login_required
@@ -1613,11 +1754,216 @@ def unassign_ticket(ticket_id):
             'ticket_id': ticket_id,
             'ticket_number': ticket.ticket_number
         })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error unassigning ticket: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error unassigning ticket: {str(e)}'}), 500
+
+@admin_bp.route('/api/settings/auto_assign', methods=['GET', 'POST'])
+@login_required
+def toggle_auto_assign():
+    """Toggle auto-assignment setting"""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+        
+    try:
+        if request.method == 'GET':
+            config = SystemConfig.query.get('auto_assign_enabled')
+            enabled = config and config.value == 'true'
+            return jsonify({'success': True, 'enabled': enabled})
+
+        data = request.get_json()
+        enabled = data.get('enabled')
+        
+        config = SystemConfig.query.get('auto_assign_enabled')
+        if not config:
+            config = SystemConfig(key='auto_assign_enabled')
+            db.session.add(config)
+            
+        config.value = 'true' if enabled else 'false'
+        db.session.commit()
+        
+        # Trigger assignment if enabled
+        triggered_count = 0
+        if enabled:
+            from ..services.assignment_service import trigger_batch_assignment
+            results = trigger_batch_assignment()
+            triggered_count = len(results)
+            current_app.logger.info(f"Auto-assign enabled. Triggered assignment for {triggered_count} tickets.")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Auto-assignment {"enabled" if enabled else "disabled"}' + 
+                       (f'. Assigned {triggered_count} pending tickets.' if enabled and triggered_count > 0 else '')
+        })
         
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error unassigning ticket {ticket_id}: {str(e)}")
+        current_app.logger.error(f"Error toggling settings: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@admin_bp.route('/reports/generate', methods=['POST'])
+@login_required
+def generate_reports():
+    """Generate reports based on criteria"""
+    try:
+        data = request.get_json()
+        report_type = data.get('reportType')
+        start_date = data.get('startDate')
+        end_date = data.get('endDate')
+        
+        # Parse dates
+        start = datetime.strptime(start_date, '%Y-%m-%d').date() if start_date else datetime.now().date()
+        end = datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else datetime.now().date()
+        
+        # Generate stats (Proof of concept - simplified aggregation)
+        # In a real app, this would aggregate by day
+        results = []
+        
+        current_date = start
+        while current_date <= end:
+            # Get stats for this day
+            day_served = Queue.query.filter(
+                Queue.status == 'completed',
+                func.date(Queue.updated_at) == current_date
+            ).count()
+            
+            # Simulated avg wait (simplified)
+            avg_wait = 0
+            completed = Queue.query.filter(
+                Queue.status == 'completed',
+                func.date(Queue.updated_at) == current_date
+            ).all()
+            
+            if completed:
+                total_min = sum([(t.updated_at - t.created_at).total_seconds() / 60 for t in completed if t.updated_at and t.created_at])
+                avg_wait = round(total_min / len(completed), 1)
+            
+            # Calculate service stats
+            avg_service_time = 0
+            if day_served > 0:
+                total_service_time = db.session.query(func.sum(Queue.service_time)).filter(
+                    Queue.status == 'completed',
+                    func.date(Queue.updated_at) == current_date
+                ).scalar() or 0
+                avg_service_time = round(total_service_time / day_served, 1)
+
+            # Service Distribution
+            service_dist = db.session.query(
+                ServiceType.name_fr,
+                func.count(Queue.id)
+            ).join(Queue).filter(
+                func.date(Queue.created_at) == current_date
+            ).group_by(ServiceType.name_fr).all()
+            
+            dist_str = ", ".join([f"{name}: {count}" for name, count in service_dist])
+
+            results.append({
+                'date': current_date.strftime('%Y-%m-%d'),
+                'served': day_served,
+                'avgWaitTime': avg_wait,
+                'avgServiceTime': avg_service_time,
+                'peakHour': 'N/A', # Placeholder for complexity
+                'serviceDistribution': dist_str
+            })
+            current_date += timedelta(days=1)
+            
         return jsonify({
-            'success': False,
-            'message': f'Error unassigning ticket: {str(e)}'
-        }), 500
+            'success': True,
+            'data': results
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Report generation error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@admin_bp.route('/api/metrics/dashboard')
+@login_required
+def dashboard_metrics():
+    """Get dashboard metrics for AJAX updates"""
+    try:
+        today = datetime.utcnow().date()
+        
+        # 1. Current Metrics
+        queue_waiting = Queue.query.filter_by(status='waiting').count()
+        queue_in_progress = Queue.query.filter_by(status='in_progress').count()
+        queue_completed_today = Queue.query.filter(
+            Queue.status == 'completed',
+            func.date(Queue.updated_at) == today
+        ).count()
+        
+        # Avg Wait Time
+        avg_wait_seconds = db.session.query(
+            func.avg(func.strftime('%s', Queue.called_at) - func.strftime('%s', Queue.created_at))
+        ).filter(
+            Queue.status == 'completed',
+            Queue.called_at.isnot(None),
+            func.date(Queue.updated_at) == today
+        ).scalar()
+        average_wait_time = round(avg_wait_seconds / 60) if avg_wait_seconds else 0
+        
+        # Avg Service Time
+        avg_service_seconds = db.session.query(
+            func.avg(Queue.service_time)
+        ).filter(
+            Queue.status == 'completed',
+            func.date(Queue.updated_at) == today
+        ).scalar()
+        average_service_time = round(avg_service_seconds) if avg_service_seconds else 0
+
+        # Agent Utilization (Active / Total Agents)
+        total_agents = Agent.query.filter(Agent.role != 'admin').count()
+        active_agents = Agent.query.filter(
+            Agent.role != 'admin',
+            Agent.status.in_(['available', 'busy'])
+        ).count()
+        agent_utilization = round((active_agents / total_agents * 100) if total_agents > 0 else 0)
+
+        # 2. Hourly Distribution (Tickets created per hour today)
+        hourly_data = db.session.query(
+            func.strftime('%H', Queue.created_at).label('hour'),
+            func.count(Queue.id).label('count')
+        ).filter(
+            func.date(Queue.created_at) == today
+        ).group_by('hour').all()
+        
+        hourly_distribution = [{'hour': int(h), 'tickets': c} for h, c in hourly_data]
+        
+        # 3. Service Distribution (All Time)
+        # Simplified to avoid JOIN issues
+        service_counts = db.session.query(
+            Queue.service_type_id,
+            func.count(Queue.id)
+        ).group_by(Queue.service_type_id).all()
+        
+        service_distribution = {}
+        for s_id, count in service_counts:
+            service = ServiceType.query.get(s_id)
+            if service:
+                name = service.name_en or service.name_fr or f"Service {s_id}"
+            else:
+                name = f"Unknown Service ({s_id})"
+            service_distribution[name] = count
+            
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'current_metrics': {
+                    'queue_waiting': queue_waiting,
+                    'queue_in_progress': queue_in_progress,
+                    'queue_completed_today': queue_completed_today,
+                    'average_wait_time': average_wait_time,
+                    'average_service_time': average_service_time,
+                    'agent_utilization': agent_utilization
+                },
+                'hourly_distribution': hourly_distribution,
+                'service_distribution': service_distribution,
+                'alerts': [] # Placeholder for alerts system
+            }
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error fetching dashboard metrics: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500

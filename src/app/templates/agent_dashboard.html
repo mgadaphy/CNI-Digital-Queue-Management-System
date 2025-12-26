@@ -7,30 +7,38 @@
         <span id="agent-status-badge" class="badge bg-success fs-6">Status: {{ agent.status|capitalize }}</span>
         <div class="ms-2 d-flex align-items-center">
             <select id="status-select" class="form-select me-2">
-                <option value="available" {% if agent.status == 'available' %}selected{% endif %}>Available</option>
-                <option value="on_break" {% if agent.status == 'on_break' %}selected{% endif %}>On Break</option>
-                <option value="busy" {% if agent.status == 'busy' %}selected{% endif %}>Busy</option>
-                <option value="offline" {% if agent.status == 'offline' %}selected{% endif %}>Offline</option>
+                <option value="available" {% if agent.status=='available' %}selected{% endif %}>Available</option>
+                <option value="on_break" {% if agent.status=='on_break' %}selected{% endif %}>On Break</option>
+                <option value="busy" {% if agent.status=='busy' %}selected{% endif %}>Busy</option>
+                <option value="offline" {% if agent.status=='offline' %}selected{% endif %}>Offline</option>
             </select>
             <button id="logout-btn" class="btn btn-danger">Logout</button>
         </div>
     </div>
 </div>
 
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card text-center">
-            <div class="card-body">
-                <h5 class="card-title">Citizens Served Today</h5>
-                <p id="served-today" class="card-text display-4">{{ metrics.citizens_served_today }}</p>
+<div class="row mb-4 g-3">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #198754 !important;">
+            <div class="card-body text-center">
+                <h6 class="card-title text-muted text-uppercase small">Served Today</h6>
+                <p id="served-today" class="display-4 fw-bold mb-0 text-dark">{{ metrics.citizens_served_today }}</p>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card text-center">
-            <div class="card-body">
-                <h5 class="card-title">Average Service Time</h5>
-                <p id="avg-time" class="card-text display-4">{{ metrics.avg_service_time }} min</p>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #0d6efd !important;">
+            <div class="card-body text-center">
+                <h6 class="card-title text-muted text-uppercase small">Served This Month</h6>
+                <p id="served-month" class="display-4 fw-bold mb-0 text-dark">{{ metrics.citizens_served_month }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #6c757d !important;">
+            <div class="card-body text-center">
+                <h6 class="card-title text-muted text-uppercase small">Lifetime Served</h6>
+                <p id="served-total" class="display-4 fw-bold mb-0 text-dark">{{ metrics.citizens_served_total }}</p>
             </div>
         </div>
     </div>
@@ -38,27 +46,34 @@
 
 {% if agent.status == 'busy' and currently_serving %}
 <div class="card mb-4 text-white bg-primary">
-    <div class="card-header"><h4>Currently Serving</h4></div>
+    <div class="card-header">
+        <h4>Currently Serving</h4>
+    </div>
     <div class="card-body text-center">
         <h2 class="display-4">{{ currently_serving.ticket_number }}</h2>
         <p class="lead">Service: {{ currently_serving.service_type.name }}</p>
-        <p class="mb-3">Citizen: {{ currently_serving.citizen.first_name }} {{ currently_serving.citizen.last_name }}</p>
-        <button id="completeServiceBtn" data-ticket-id="{{ currently_serving.id }}" class="btn btn-light btn-lg">Complete Service</button>
+        <p class="mb-3">Citizen: {{ currently_serving.citizen.first_name }} {{ currently_serving.citizen.last_name }}
+        </p>
+        <button id="completeServiceBtn" data-ticket-id="{{ currently_serving.id }}"
+            class="btn btn-light btn-lg">Complete Service</button>
     </div>
 </div>
 {% else %}
 <div class="card mb-4">
-    <div class="card-header"><h4>Next Citizen to Call</h4></div>
+    <div class="card-header">
+        <h4>Next Citizen to Call</h4>
+    </div>
     <div class="card-body text-center">
         {% if next_citizen %}
-            <h2 class="display-4">{{ next_citizen.ticket_number }}</h2>
-            <p class="lead">Service: {{ next_citizen.service_type.name }}</p>
-            <p class="mb-3">Citizen: {{ next_citizen.citizen.first_name }} {{ next_citizen.citizen.last_name }}</p>
+        <h2 class="display-4">{{ next_citizen.ticket_number }}</h2>
+        <p class="lead">Service: {{ next_citizen.service_type.name }}</p>
+        <p class="mb-3">Citizen: {{ next_citizen.citizen.first_name }} {{ next_citizen.citizen.last_name }}</p>
         {% else %}
-            <h2 class="display-4">-</h2>
-            <p class="lead">No tickets assigned to you.</p>
+        <h2 class="display-4">-</h2>
+        <p class="lead">No tickets assigned to you.</p>
         {% endif %}
-        <button id="callNextBtn" class="btn btn-primary btn-lg {% if not next_citizen %}disabled{% endif %}"{% if not next_citizen %} disabled{% endif %}>Call Next Citizen</button>
+        <button id="callNextBtn" class="btn btn-primary btn-lg {% if not next_citizen %}disabled{% endif %}" {% if not
+            next_citizen %} disabled{% endif %}>Call Next Citizen</button>
     </div>
 </div>
 {% endif %}
@@ -94,43 +109,48 @@
                             <!-- Debug: Show assigned_tickets count -->
                             <!-- Assigned tickets count: {{ assigned_tickets|length }} -->
                             {% if assigned_tickets %}
-                                {% for ticket in assigned_tickets %}
-                                <tr>
-                                    <td><strong>{{ ticket.ticket_number }}</strong></td>
-                                    <td>{{ ticket.citizen.first_name }} {{ ticket.citizen.last_name }}</td>
-                                    <td>{{ ticket.service_type.name_fr if ticket.service_type else 'Unknown' }}</td>
-                                    <td>
-                                        <span class="badge bg-{% if ticket.priority_score >= 8 %}danger{% elif ticket.priority_score >= 5 %}warning{% else %}info{% endif %}">
-                                            {{ ticket.priority_score }}
-                                        </span>
-                                    </td>
-                                    <td>{{ ticket.wait_time_display }}</td>
-                                    <td>
-                                        <span class="badge bg-{% if ticket.status == 'in_progress' %}success{% elif ticket.status == 'assigned' %}primary{% elif ticket.status == 'waiting' %}warning{% else %}secondary{% endif %}">
-                                            {{ ticket.status|replace('_', ' ')|title }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {% if ticket.status == 'assigned' %}
-                                            <button class="btn btn-sm btn-primary" onclick="callSpecificTicket('{{ ticket.id }}')">
-                                                <i class="fas fa-phone"></i> Call
-                                            </button>
-                                        {% elif ticket.status == 'waiting' %}
-                                            <button class="btn btn-sm btn-outline-primary" onclick="callSpecificTicket('{{ ticket.id }}')">
-                                                <i class="fas fa-phone"></i> Call
-                                            </button>
-                                        {% elif ticket.status == 'in_progress' %}
-                                            <button class="btn btn-sm btn-success" onclick="completeSpecificTicket('{{ ticket.id }}')">
-                                                <i class="fas fa-check"></i> Complete
-                                            </button>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
+                            {% for ticket in assigned_tickets %}
+                            <tr>
+                                <td><strong>{{ ticket.ticket_number }}</strong></td>
+                                <td>{{ ticket.citizen.first_name }} {{ ticket.citizen.last_name }}</td>
+                                <td>{{ ticket.service_type.name_fr if ticket.service_type else 'Unknown' }}</td>
+                                <td>
+                                    <span
+                                        class="badge bg-{% if ticket.priority_score >= 8 %}danger{% elif ticket.priority_score >= 5 %}warning{% else %}info{% endif %}">
+                                        {{ ticket.priority_score }}
+                                    </span>
+                                </td>
+                                <td>{{ ticket.wait_time_display }}</td>
+                                <td>
+                                    <span
+                                        class="badge bg-{% if ticket.status == 'in_progress' %}success{% elif ticket.status == 'assigned' %}primary{% elif ticket.status == 'waiting' %}warning{% else %}secondary{% endif %}">
+                                        {{ ticket.status|replace('_', ' ')|title }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if ticket.status == 'assigned' %}
+                                    <button class="btn btn-sm btn-primary"
+                                        onclick="callSpecificTicket('{{ ticket.id }}')">
+                                        <i class="fas fa-phone"></i> Call
+                                    </button>
+                                    {% elif ticket.status == 'waiting' %}
+                                    <button class="btn btn-sm btn-outline-primary"
+                                        onclick="callSpecificTicket('{{ ticket.id }}')">
+                                        <i class="fas fa-phone"></i> Call
+                                    </button>
+                                    {% elif ticket.status == 'in_progress' %}
+                                    <button class="btn btn-sm btn-success"
+                                        onclick="completeSpecificTicket('{{ ticket.id }}')">
+                                        <i class="fas fa-check"></i> Complete
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
                             {% else %}
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted">No tickets assigned to you</td>
-                                </tr>
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">No tickets assigned to you</td>
+                            </tr>
                             {% endif %}
                         </tbody>
                     </table>
@@ -175,216 +195,216 @@
 
 {% block scripts %}
 <script>
-// CSRF token function (fallback if not available globally)
-function getCsrfToken() {
-    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-}
+    // CSRF token function (fallback if not available globally)
+    function getCsrfToken() {
+        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    }
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle Agent Logout Button
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            // Show loading state
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging out...';
-            this.disabled = true;
-            
-            // Call the global logout function from base template
-            if (typeof handleLogout === 'function') {
-                handleLogout(e);
-            } else {
-                // Fallback logout logic
-                fetch('/auth/logout', {
+    document.addEventListener('DOMContentLoaded', function () {
+        // Handle Agent Logout Button
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                // Show loading state
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging out...';
+                this.disabled = true;
+
+                // Call the global logout function from base template
+                if (typeof handleLogout === 'function') {
+                    handleLogout(e);
+                } else {
+                    // Fallback logout logic
+                    fetch('/auth/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': getCsrfToken()
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.message === 'Logout successful') {
+                                window.location.href = '/auth/login-page';
+                            } else {
+                                alert('Logout failed: ' + data.message);
+                                this.innerHTML = 'Logout';
+                                this.disabled = false;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Logout error:', error);
+                            alert('An error occurred during logout.');
+                            this.innerHTML = 'Logout';
+                            this.disabled = false;
+                        });
+                }
+            });
+        }
+
+        // Handle Call Next Citizen button
+        const callNextBtn = document.getElementById('callNextBtn');
+        if (callNextBtn && !callNextBtn.disabled && !callNextBtn.classList.contains('disabled')) {
+            callNextBtn.addEventListener('click', function () {
+                // Disable button to prevent double clicks
+                this.disabled = true;
+                this.textContent = 'Calling...';
+
+                // Send POST request to call next citizen
+                fetch('/agent/call_next', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': getCsrfToken()
                     }
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.message === 'Logout successful') {
-                        window.location.href = '/auth/login-page';
-                    } else {
-                        alert('Logout failed: ' + data.message);
-                        this.innerHTML = 'Logout';
-                        this.disabled = false;
-                    }
-                })
-                .catch(error => {
-                    console.error('Logout error:', error);
-                    alert('An error occurred during logout.');
-                    this.innerHTML = 'Logout';
-                    this.disabled = false;
-                });
-            }
-        });
-    }
-
-    // Handle Call Next Citizen button
-    const callNextBtn = document.getElementById('callNextBtn');
-    if (callNextBtn && !callNextBtn.disabled && !callNextBtn.classList.contains('disabled')) {
-        callNextBtn.addEventListener('click', function() {
-            // Disable button to prevent double clicks
-            this.disabled = true;
-            this.textContent = 'Calling...';
-            
-            // Send POST request to call next citizen
-            fetch('/agent/call_next', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken()
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Show success message
-                    this.textContent = '✓ Called';
-                    this.classList.remove('btn-primary');
-                    this.classList.add('btn-success');
-                    
-                    // Reload the page after a short delay to show updated dashboard
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                } else {
-                    alert('Error: ' + data.message);
-                    // Re-enable button
-                    this.disabled = false;
-                    this.textContent = 'Call Next Citizen';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to call next citizen: ' + error.message);
-                // Re-enable button
-                this.disabled = false;
-                this.textContent = 'Call Next Citizen';
-            });
-        });
-    }
-
-    // Handle Complete Service button
-    const completeServiceBtn = document.getElementById('completeServiceBtn');
-    if (completeServiceBtn) {
-        completeServiceBtn.addEventListener('click', function() {
-            const ticketId = this.getAttribute('data-ticket-id');
-            
-            if (!ticketId) {
-                alert('No ticket ID found');
-                return;
-            }
-            
-            // Disable button to prevent double clicks
-            this.disabled = true;
-            this.textContent = 'Completing...';
-            
-            // Send POST request to complete service
-            fetch('/agent/complete_service', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken()
-                },
-                body: JSON.stringify({
-                    ticket_id: ticketId
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Show success message
-                    this.textContent = '✓ Completed';
-                    this.classList.remove('btn-light');
-                    this.classList.add('btn-success');
-                    
-                    // Reload the page after a short delay to show success state
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                } else {
-                    alert('Error: ' + data.message);
-                    // Re-enable button
-                    this.disabled = false;
-                    this.textContent = 'Complete Service';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to complete service: ' + error.message);
-                // Re-enable button
-                this.disabled = false;
-                this.textContent = 'Complete Service';
-            });
-        });
-    }
-    
-    // Force dropdown initialization for agent dashboard - SIMPLIFIED APPROACH
-    setTimeout(function() {
-        console.log('Agent dashboard: Initializing dropdown...');
-        const userDropdown = document.getElementById('userDropdown');
-        if (userDropdown) {
-            console.log('Agent dashboard: User dropdown found');
-            
-            // SIMPLE MANUAL DROPDOWN - Skip Bootstrap complexity
-            userDropdown.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Agent dashboard: Dropdown clicked');
-                
-                const menu = this.nextElementSibling;
-                if (menu && menu.classList.contains('dropdown-menu')) {
-                    // Close any other open dropdowns first
-                    document.querySelectorAll('.dropdown-menu.show').forEach(m => {
-                        if (m !== menu) {
-                            m.classList.remove('show');
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
                         }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Show success message
+                            this.textContent = '✓ Called';
+                            this.classList.remove('btn-primary');
+                            this.classList.add('btn-success');
+
+                            // Reload the page after a short delay to show updated dashboard
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            alert('Error: ' + data.message);
+                            // Re-enable button
+                            this.disabled = false;
+                            this.textContent = 'Call Next Citizen';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to call next citizen: ' + error.message);
+                        // Re-enable button
+                        this.disabled = false;
+                        this.textContent = 'Call Next Citizen';
                     });
-                    
-                    // Toggle this dropdown
-                    const isShowing = menu.classList.contains('show');
-                    if (isShowing) {
-                        menu.classList.remove('show');
-                        console.log('Agent dashboard: Dropdown closed');
+            });
+        }
+
+        // Handle Complete Service button
+        const completeServiceBtn = document.getElementById('completeServiceBtn');
+        if (completeServiceBtn) {
+            completeServiceBtn.addEventListener('click', function () {
+                const ticketId = this.getAttribute('data-ticket-id');
+
+                if (!ticketId) {
+                    alert('No ticket ID found');
+                    return;
+                }
+
+                // Disable button to prevent double clicks
+                this.disabled = true;
+                this.textContent = 'Completing...';
+
+                // Send POST request to complete service
+                fetch('/agent/complete_service', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        ticket_id: ticketId
+                    })
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Show success message
+                            this.textContent = '✓ Completed';
+                            this.classList.remove('btn-light');
+                            this.classList.add('btn-success');
+
+                            // Reload the page after a short delay to show success state
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            alert('Error: ' + data.message);
+                            // Re-enable button
+                            this.disabled = false;
+                            this.textContent = 'Complete Service';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to complete service: ' + error.message);
+                        // Re-enable button
+                        this.disabled = false;
+                        this.textContent = 'Complete Service';
+                    });
+            });
+        }
+
+        // Force dropdown initialization for agent dashboard - SIMPLIFIED APPROACH
+        setTimeout(function () {
+            console.log('Agent dashboard: Initializing dropdown...');
+            const userDropdown = document.getElementById('userDropdown');
+            if (userDropdown) {
+                console.log('Agent dashboard: User dropdown found');
+
+                // SIMPLE MANUAL DROPDOWN - Skip Bootstrap complexity
+                userDropdown.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Agent dashboard: Dropdown clicked');
+
+                    const menu = this.nextElementSibling;
+                    if (menu && menu.classList.contains('dropdown-menu')) {
+                        // Close any other open dropdowns first
+                        document.querySelectorAll('.dropdown-menu.show').forEach(m => {
+                            if (m !== menu) {
+                                m.classList.remove('show');
+                            }
+                        });
+
+                        // Toggle this dropdown
+                        const isShowing = menu.classList.contains('show');
+                        if (isShowing) {
+                            menu.classList.remove('show');
+                            console.log('Agent dashboard: Dropdown closed');
+                        } else {
+                            menu.classList.add('show');
+                            console.log('Agent dashboard: Dropdown opened');
+                        }
                     } else {
-                        menu.classList.add('show');
-                        console.log('Agent dashboard: Dropdown opened');
+                        console.error('Agent dashboard: Dropdown menu not found');
                     }
-                } else {
-                    console.error('Agent dashboard: Dropdown menu not found');
+                });
+
+                console.log('Agent dashboard: Manual dropdown handler added');
+            } else {
+                console.error('Agent dashboard: User dropdown not found');
+            }
+
+            // Add global click handler for agent dashboard
+            document.addEventListener('click', function (e) {
+                if (!e.target.closest('.dropdown')) {
+                    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                        menu.classList.remove('show');
+                    });
+                    console.log('Agent dashboard: All dropdowns closed by outside click');
                 }
             });
-            
-            console.log('Agent dashboard: Manual dropdown handler added');
-        } else {
-            console.error('Agent dashboard: User dropdown not found');
-        }
-        
-        // Add global click handler for agent dashboard
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.dropdown')) {
-                document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-                    menu.classList.remove('show');
-                });
-                console.log('Agent dashboard: All dropdowns closed by outside click');
-            }
-        });
-        
-    }, 300); // Reduced delay
-});
+
+        }, 300); // Reduced delay
+    });
 </script>
 {% endblock %}

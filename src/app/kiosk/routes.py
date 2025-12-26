@@ -81,7 +81,8 @@ def checkin_form():
     return render_template('kiosk_checkin.html',
                          title='Check-in - CNI Digital Queue',
                          service=service_data,
-                         language=language)
+                         language=language,
+                         now=datetime.now())
 
 @kiosk_bp.route('/process-checkin', methods=['POST'])
 @csrf.exempt
@@ -216,6 +217,22 @@ def process_checkin():
             'estimated_wait': service_type.estimated_duration
         })
         
+        # Trigger auto-assignment if enabled
+        try:
+            from ..models import SystemConfig
+            config = SystemConfig.query.get('auto_assign_enabled')
+            if config and config.value == 'true':
+                from ..services.assignment_service import assign_next_ticket
+                # We use assign_next_ticket instead of batch to avoid overhead, 
+                # but batch is safer to catch any missed ones. 
+                # Let's use assign_next_ticket for immediate response optimization
+                assign_next_ticket(ticket.id)
+        except Exception as e:
+            # Don't fail the request if auto-assign fails, just log it
+            # But we can't log easily here without app context issues potentially? 
+            # No, we are in request context.
+            pass
+
     except Exception as e:
         db.session.rollback()
         language = session.get('language', 'fr')

@@ -65,6 +65,12 @@ class ServiceType(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class SystemConfig(db.Model):
+    __tablename__ = 'system_config'
+    key = db.Column(db.String(50), primary_key=True)
+    value = db.Column(db.String(255)) # Store as JSON string or simple string
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 class Station(db.Model):
     __tablename__ = 'stations'
     id = db.Column(db.Integer, primary_key=True)
@@ -109,6 +115,11 @@ class Agent(UserMixin, db.Model):
     employee_id = db.Column(db.String(50), unique=True, nullable=False)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
+    
+    @property
+    def name(self):
+        return f"{self.first_name} {self.last_name}"
+
     _email = db.Column('email', db.String(255), unique=True, nullable=False)  # Encrypted field
     _phone = db.Column('phone', db.String(255))  # Encrypted field
     password_hash = db.Column(db.String(256))
