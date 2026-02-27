@@ -7,7 +7,8 @@ def run_setup():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     src_dir = os.path.join(base_dir, 'src')
     
-    # Create the actual setup script inside the src directory context
+    # We will write a tiny script that explicitly sets up the sys.path exactly like run.py does,
+    # and then imports the app module context to initialize the database.
     setup_script_path = os.path.join(src_dir, 'run_setup_internal.py')
     
     internal_script = """
@@ -15,10 +16,8 @@ import os
 import sys
 from datetime import datetime, timedelta
 
-# Ensure src is in python path natively
-current_dir = os.path.dirname(os.path.abspath(__file__))
-if current_dir not in sys.path:
-    sys.path.insert(0, current_dir)
+# Crucial: Add the exact directory the script is in to the path, exactly like run.py does
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from app import create_app
 from app.extensions import db
@@ -30,7 +29,6 @@ def setup_database():
         print("Creating database tables...")
         db.create_all()
 
-        # 1. Initialize Admin
         admin = Agent.query.filter_by(employee_id='ADMIN001').first()
         if not admin:
             print("Creating System Administrator (ADMIN001)...")
@@ -46,7 +44,6 @@ def setup_database():
             admin.set_password('admin123')
             db.session.add(admin)
 
-        # 2. Initialize Default Agents
         agent1 = Agent.query.filter_by(employee_id='AGT001').first()
         if not agent1:
             print("Creating default Agent 1 (AGT001)...")
@@ -77,7 +74,6 @@ def setup_database():
             agent2.set_password('agent123')
             db.session.add(agent2)
 
-        # 3. Initialize Default Services
         print("Initializing CNI Service Types...")
         services_data = [
             {'code': 'NEW', 'name_fr': 'Nouvelle Demande', 'name_en': 'New Application', 'priority': 10, 'duration': 15},
@@ -102,14 +98,12 @@ def setup_database():
                 db.session.commit()
             db_services[srv['code']] = service
 
-        # 4. Initialize System Config
         print("Configuring System Preferences...")
         config_auto = SystemConfig.query.filter_by(key='auto_assign_enabled').first()
         if not config_auto:
             config = SystemConfig(key='auto_assign_enabled', value='true')
             db.session.add(config)
 
-        # 5. Initialize Stations (Counters)
         print("Building Workstations (Counters)...")
         station1 = Station.query.filter_by(station_number='C01').first()
         if not station1:
@@ -123,13 +117,11 @@ def setup_database():
             
         db.session.commit()
 
-        # Try linking agents to stations
         if agent1 and not agent1.current_station_id:
             agent1.current_station_id = station1.id
         if agent2 and not agent2.current_station_id:
             agent2.current_station_id = station2.id
 
-        # 6. Initialize Sample Citizens
         citizens_list = []
         if Citizen.query.count() == 0:
             print("Registering Sample Citizens...")
@@ -154,7 +146,6 @@ def setup_database():
         else:
             citizens_list = Citizen.query.limit(4).all()
 
-        # 7. Initialize Sample Queue Tickets
         if Queue.query.count() == 0 and len(citizens_list) >= 4:
             print("Generating Sample Queue Traffic...")
             
@@ -220,20 +211,18 @@ if __name__ == "__main__":
     setup_database()
 """
     
-    # Write the temporary script to src directory
     try:
         with open(setup_script_path, "w") as f:
             f.write(internal_script)
             
-        # Execute it using the current python executable, from within the src dir
         print("Starting environment stabilization proxy...")
-        subprocess.check_call([sys.executable, setup_script_path], cwd=src_dir)
+        # Execute exactly how run.py does, in identical context
+        subprocess.check_call([sys.executable, "run_setup_internal.py"], cwd=src_dir)
         
     except Exception as e:
         print(f"Failed to execute setup: {e}")
         
     finally:
-        # Clean up the script so it doesn't clutter the src folder
         if os.path.exists(setup_script_path):
             os.remove(setup_script_path)
 
