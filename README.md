@@ -54,7 +54,18 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-4. **Run the application**
+4. **Setup Database and Default Data**
+```bash
+python setup.py
+```
+This script will:
+- Create the SQLite database automatically.
+- Initialize default Service Types (`NEW`, `REN`, `COL`, `LOST`).
+- Create a default Admin (`ADMIN001` / `admin123`).
+- Create a default Agent (`AGT001` / `agent123`).
+- Configure system defaults (e.g., auto-assignment `true`).
+
+5. **Run the application**
 ```bash
 cd src
 python run.py
