@@ -5,12 +5,14 @@ import random
 
 # Add src to Python Path
 base_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(base_dir, 'src'))
+src_dir = os.path.join(base_dir, 'src')
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
 
 try:
-    from src.app import create_app
-    from src.app.extensions import db
-    from src.app.models import Agent, ServiceType, SystemConfig, Station, Citizen, Queue
+    from app import create_app
+    from app.extensions import db
+    from app.models import Agent, ServiceType, SystemConfig, Station, Citizen, Queue
 except ImportError as e:
     print(f"Error importing app modules: {e}")
     print("Ensure you have run pip install -r requirements.txt and are running within the virtual environment.")
