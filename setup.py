@@ -1,27 +1,32 @@
 import os
 import sys
+import subprocess
 from datetime import datetime, timedelta
-import random
 
-# Add src to Python Path
-base_dir = os.path.dirname(os.path.abspath(__file__))
-src_dir = os.path.join(base_dir, 'src')
-if src_dir not in sys.path:
-    sys.path.insert(0, src_dir)
+def run_setup():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    src_dir = os.path.join(base_dir, 'src')
+    
+    # Create the actual setup script inside the src directory context
+    setup_script_path = os.path.join(src_dir, 'run_setup_internal.py')
+    
+    internal_script = """
+import os
+import sys
+from datetime import datetime, timedelta
 
-try:
-    from app import create_app
-    from app.extensions import db
-    from app.models import Agent, ServiceType, SystemConfig, Station, Citizen, Queue
-except ImportError as e:
-    print(f"Error importing app modules: {e}")
-    print("Ensure you have run pip install -r requirements.txt and are running within the virtual environment.")
-    sys.exit(1)
+# Ensure src is in python path natively
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+from app import create_app
+from app.extensions import db
+from app.models import Agent, ServiceType, SystemConfig, Station, Citizen, Queue
 
 def setup_database():
     app = create_app()
     with app.app_context():
-        # Create all tables
         print("Creating database tables...")
         db.create_all()
 
@@ -149,11 +154,10 @@ def setup_database():
         else:
             citizens_list = Citizen.query.limit(4).all()
 
-        # 7. Initialize Sample Queue Tickets (To make the dashboard look active)
+        # 7. Initialize Sample Queue Tickets
         if Queue.query.count() == 0 and len(citizens_list) >= 4:
             print("Generating Sample Queue Traffic...")
             
-            # Ticket 1: Waiting (Just arrived)
             q1 = Queue(
                 citizen_id=citizens_list[0].id,
                 service_type_id=db_services['NEW'].id,
@@ -163,7 +167,6 @@ def setup_database():
                 created_at=datetime.utcnow() - timedelta(minutes=5)
             )
             
-            # Ticket 2: Assigned (Agent assigned but hasn't started serving)
             q2 = Queue(
                 citizen_id=citizens_list[1].id,
                 service_type_id=db_services['REN'].id,
@@ -174,7 +177,6 @@ def setup_database():
                 created_at=datetime.utcnow() - timedelta(minutes=10)
             )
             
-            # Ticket 3: In Progress (Currently at a counter)
             q3 = Queue(
                 citizen_id=citizens_list[2].id,
                 service_type_id=db_services['COL'].id,
@@ -187,7 +189,6 @@ def setup_database():
                 called_at=datetime.utcnow() - timedelta(minutes=5)
             )
             
-            # Ticket 4: Completed (Already finished today)
             q4 = Queue(
                 citizen_id=citizens_list[3].id,
                 service_type_id=db_services['LOST'].id,
@@ -206,14 +207,35 @@ def setup_database():
             db.session.add_all([q1, q2, q3, q4])
             db.session.commit()
 
-        print("\n========================================================")
+        print("\\n========================================================")
         print("Setup Complete! The project is fully seeded and ready.")
-        print("========================================================\n")
+        print("========================================================\\n")
         print("1. Admin Login:   ADMIN001 / admin123")
         print("2. Agent Login:   AGT001   / agent123")
         print("                  AGT002   / agent123")
-        print("\nStart Server Command:")
+        print("\\nStart Server Command:")
         print("cd src && python run.py")
 
 if __name__ == "__main__":
     setup_database()
+"""
+    
+    # Write the temporary script to src directory
+    try:
+        with open(setup_script_path, "w") as f:
+            f.write(internal_script)
+            
+        # Execute it using the current python executable, from within the src dir
+        print("Starting environment stabilization proxy...")
+        subprocess.check_call([sys.executable, setup_script_path], cwd=src_dir)
+        
+    except Exception as e:
+        print(f"Failed to execute setup: {e}")
+        
+    finally:
+        # Clean up the script so it doesn't clutter the src folder
+        if os.path.exists(setup_script_path):
+            os.remove(setup_script_path)
+
+if __name__ == "__main__":
+    run_setup()
