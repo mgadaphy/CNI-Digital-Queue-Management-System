@@ -1,3 +1,6 @@
+# Use pre-compiled binary wheels where possible to avoid C++ Build Tools requirement on Windows
+--prefer-binary
+
 alembic==1.16.4
 amqp==5.3.1
 APScheduler==3.11.0
@@ -8,8 +11,9 @@ Bootstrap-Flask==2.3.0
 cachelib==0.13.0
 celery==5.3.6
 certifi==2025.8.3
-cffi==1.17.1
+# cffi is a transitive dependency of cryptography - removed to allow pip to resolve compatible binary version
 charset-normalizer==3.4.3
+
 click==8.2.1
 click-didyoumean==0.3.1
 click-plugins==1.1.1.2
