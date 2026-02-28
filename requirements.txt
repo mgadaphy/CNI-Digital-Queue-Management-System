@@ -53,8 +53,7 @@ packaging==25.0
 pluggy==1.6.0
 prometheus_client==0.20.0
 prompt_toolkit==3.0.51
-psycopg==3.2.9
-psycopg-binary==3.2.9
+# psycopg / psycopg-binary removed - app uses SQLite, not PostgreSQL
 pybreaker==1.1.0
 pycparser==2.22
 Pygments==2.19.2
