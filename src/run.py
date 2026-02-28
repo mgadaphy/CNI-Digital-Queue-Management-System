@@ -111,10 +111,10 @@ def setup_database(app_instance):
         if Citizen.query.count() == 0:
             print("Registering Sample Citizens...")
             samples = [
-                ("Paul", "Kone", "1990-05-14", "PE-2023-0001", "22501020304"),
-                ("Fatou", "Diallo", "1985-11-20", "PE-2023-0002", "22505060708"),
-                ("Marc", "Aka", "2000-02-10", "PE-2023-0003", "22509101112"),
-                ("Awa", "Toure", "1995-08-30", "PE-2023-0004", "22513141516")
+                ("Paul",  "Kone",   "1990-05-14", "PE-14051990-100001", "22501020304"),
+                ("Fatou", "Diallo", "1985-11-20", "PE-20111985-100002", "22505060708"),
+                ("Marc",  "Aka",    "2000-02-10", "PE-10022000-100003", "22509101112"),
+                ("Awa",   "Toure",  "1995-08-30", "PE-30081995-100004", "22513141516")
             ]
             for fname, lname, dob_str, pe_code, phone in samples:
                 cit = Citizen(
