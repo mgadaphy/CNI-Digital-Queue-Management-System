@@ -61,10 +61,10 @@ def setup_database(app_instance):
 
         print("Initializing CNI Service Types...")
         services_data = [
-            {'code': 'NEW', 'name_fr': 'Nouvelle Demande', 'name_en': 'New Application', 'priority': 10, 'duration': 15},
-            {'code': 'REN', 'name_fr': 'Renouvellement', 'name_en': 'Renewal', 'priority': 20, 'duration': 10},
-            {'code': 'COL', 'name_fr': 'Retrait', 'name_en': 'Collection', 'priority': 30, 'duration': 5},
-            {'code': 'LOST', 'name_fr': 'Perte/Vol', 'name_en': 'Lost/Stolen', 'priority': 40, 'duration': 20}
+            {'code': 'NEW_APP',    'name_fr': 'Nouvelle Demande',  'name_en': 'New Application', 'priority': 10, 'duration': 15},
+            {'code': 'RENEWAL',    'name_fr': 'Renouvellement',    'name_en': 'Renewal',          'priority': 20, 'duration': 10},
+            {'code': 'COLLECTION', 'name_fr': 'Retrait',           'name_en': 'Collection',       'priority': 30, 'duration': 5},
+            {'code': 'CORRECTION', 'name_fr': 'Perte/Correction',  'name_en': 'Lost/Correction',  'priority': 40, 'duration': 20}
         ]
         
         db_services = {}
@@ -136,7 +136,7 @@ def setup_database(app_instance):
             
             q1 = Queue(
                 citizen_id=citizens_list[0].id,
-                service_type_id=db_services['NEW'].id,
+                service_type_id=db_services['NEW_APP'].id,
                 ticket_number='N-001',
                 status='waiting',
                 priority_score=10,
@@ -145,7 +145,7 @@ def setup_database(app_instance):
             
             q2 = Queue(
                 citizen_id=citizens_list[1].id,
-                service_type_id=db_services['REN'].id,
+                service_type_id=db_services['RENEWAL'].id,
                 ticket_number='R-001',
                 status='assigned',
                 priority_score=20,
@@ -155,7 +155,7 @@ def setup_database(app_instance):
             
             q3 = Queue(
                 citizen_id=citizens_list[2].id,
-                service_type_id=db_services['COL'].id,
+                service_type_id=db_services['COLLECTION'].id,
                 ticket_number='C-001',
                 status='in_progress',
                 priority_score=30,
@@ -167,7 +167,7 @@ def setup_database(app_instance):
             
             q4 = Queue(
                 citizen_id=citizens_list[3].id,
-                service_type_id=db_services['LOST'].id,
+                service_type_id=db_services['CORRECTION'].id,
                 ticket_number='L-001',
                 status='completed',
                 priority_score=40,
