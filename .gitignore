@@ -148,7 +148,8 @@ src/instance/
 instance/
 
 # Configuration files with sensitive data
-config.py
+# Note: config.py is intentionally tracked (no secrets inside - uses env vars)
+# .flaskenv and .env are excluded as they may contain secrets
 .flaskenv
 .env
 
