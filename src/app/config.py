@@ -27,8 +27,12 @@ class Config:
     JWT_ACCESS_COOKIE_PATH = '/'
     JWT_COOKIE_CSRF_PROTECT = False  # Disable CSRF protection for simplicity
 
-    # Database
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///c:/Users/Gadaphy/Documents/Projects/CNI-Digital-Queue-Management-System/src/instance/cni_db.sqlite'
+    # Database - use a portable path relative to this file's location
+    # This resolves to src/instance/cni_db.sqlite on any machine
+    _instance_path = os.path.join(basedir, '..', 'instance')
+    os.makedirs(_instance_path, exist_ok=True)  # Ensure instance folder exists
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+        'sqlite:///' + os.path.abspath(os.path.join(_instance_path, 'cni_db.sqlite'))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 class TestingConfig(Config):
