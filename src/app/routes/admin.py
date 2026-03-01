@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, current_app, send_file, make_response
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
 from sqlalchemy import func, desc
@@ -328,7 +328,7 @@ def export_report():
             }), 400
             
         # Create CSV
-        output = StringIO()
+        output = io.StringIO()
         writer = csv.writer(output)
         
         # Write header
@@ -1967,81 +1967,3 @@ def dashboard_metrics():
     except Exception as e:
         current_app.logger.error(f"Error fetching dashboard metrics: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
-
-# ─── Reports ─────────────────────────────────────────────────────────────────
-
-@admin_bp.route('/reports')
-@login_required
-def view_reports():
-    """System reports page"""
-    from datetime import date
-
-    today = date.today()
-    total_served  = Queue.query.filter(Queue.status == 'completed',
-                                       func.date(Queue.updated_at) == today).count()
-    total_waiting = Queue.query.filter(Queue.status == 'waiting').count()
-    total_in_prog = Queue.query.filter(Queue.status == 'in_progress').count()
-
-    completed_today = Queue.query.filter(
-        Queue.status == 'completed',
-        func.date(Queue.updated_at) == today
-    ).all()
-    avg_wait = 0
-    if completed_today:
-        total_mins = sum(
-            (t.updated_at - t.created_at).total_seconds() / 60
-            for t in completed_today if t.updated_at and t.created_at
-        )
-        avg_wait = round(total_mins / len(completed_today), 1)
-
-    daily_stats = {
-        'total_served':      total_served,
-        'total_waiting':     total_waiting,
-        'total_in_progress': total_in_prog,
-        'average_wait_time': avg_wait
-    }
-    return render_template('admin_reports.html',
-                           title='Reports - CNI Queue Management',
-                           daily_stats=daily_stats)
-
-
-@admin_bp.route('/reports/export', methods=['POST'])
-@login_required
-@csrf.exempt
-def export_report():
-    """Export report data as CSV file download"""
-    try:
-        data = request.get_json()
-        if not data or 'reportData' not in data:
-            return jsonify({'error': 'No report data provided'}), 400
-
-        report_rows = data['reportData']
-        output = io.StringIO()
-        writer = csv.DictWriter(
-            output,
-            fieldnames=['date', 'served', 'avgWaitTime', 'avgServiceTime',
-                        'serviceDistribution', 'peakHour']
-        )
-        writer.writeheader()
-        for row in report_rows:
-            writer.writerow({
-                'date':                row.get('date', ''),
-                'served':              row.get('served', ''),
-                'avgWaitTime':         row.get('avgWaitTime', ''),
-                'avgServiceTime':      row.get('avgServiceTime', ''),
-                'serviceDistribution': row.get('serviceDistribution', ''),
-                'peakHour':            row.get('peakHour', '')
-            })
-
-        output.seek(0)
-        from flask import make_response
-        filename = f"cni_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        response = make_response(output.getvalue())
-        response.headers['Content-Type'] = 'text/csv; charset=utf-8'
-        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
-
-    except Exception as e:
-        current_app.logger.error(f"Error exporting report: {str(e)}")
-        return jsonify({'error': 'Failed to export report'}), 500
