@@ -42,7 +42,7 @@
                         <div class="col-md-3">
                             <div class="card bg-info text-white">
                                 <div class="card-body text-center">
-                                    <h4>{{ citizens|selectattr('has_special_needs', 'equalto', true)|list|length }}</h4>
+                                    <h4>{{ citizens|selectattr('special_needs')|list|length }}</h4>
                                     <p class="mb-0">Special Needs</p>
                                 </div>
                             </div>
@@ -108,18 +108,18 @@
                             <tbody>
                                 {% for citizen in citizens %}
                                 <tr data-status="{{ 'active' if citizen.is_active else 'inactive' }}"
-                                    data-special="{{ 'special' if citizen.has_special_needs else 'regular' }}"
+                                    data-special="{{ 'special' if citizen.special_needs else 'regular' }}"
                                     data-date="{{ citizen.created_at.strftime('%Y-%m-%d') }}">
                                     <td><strong>{{ citizen.id }}</strong></td>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            {% if citizen.has_special_needs %}
+                                            {% if citizen.special_needs %}
                                             <i class="fas fa-wheelchair text-info me-2" title="Special Needs"></i>
                                             {% endif %}
                                             {{ citizen.first_name }} {{ citizen.last_name }}
                                         </div>
                                     </td>
-                                    <td>{{ citizen.id_number or 'N/A' }}</td>
+                                    <td>N/A</td>
                                     <td>
                                         {% if citizen.pre_enrollment_code %}
                                         <span class="badge bg-primary">{{ citizen.pre_enrollment_code }}</span>
@@ -127,15 +127,12 @@
                                         <span class="text-muted">No PE Code</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ citizen.phone or 'N/A' }}</td>
+                                    <td>{{ citizen.phone_number or 'N/A' }}</td>
                                     <td>{{ citizen.email or 'N/A' }}</td>
                                     <td>
-                                        {% if citizen.has_special_needs %}
+                                        {% if citizen.special_needs %}
                                         <span class="badge bg-info">Yes</span>
-                                        {% if citizen.special_needs_description %}
-                                        <br><small class="text-muted">{{ citizen.special_needs_description[:30]
-                                            }}...</small>
-                                        {% endif %}
+                                        <br><small class="text-muted">{{ citizen.special_needs[:30] }}...</small>
                                         {% else %}
                                         <span class="badge bg-dark">No</span>
                                         {% endif %}
@@ -421,6 +418,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify(formData)
         })

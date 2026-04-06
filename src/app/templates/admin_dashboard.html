@@ -101,6 +101,7 @@
                             <tr>
                                 <th class="ps-4">Ticket</th>
                                 <th>Citizen</th>
+                                <th>PE Code</th>
                                 <th>Service</th>
                                 <th>Priority</th>
                                 <th>Status</th>
@@ -114,12 +115,13 @@
                             {% for ticket in active_tickets %}
                             <tr>
                                 <td class="ps-4 fw-bold">#{{ ticket.ticket_number }}</td>
+                                <td>{{ ticket.citizen.first_name }} {{ ticket.citizen.last_name }}</td>
                                 <td>
-                                    <div class="d-flex flex-column">
-                                        <span>{{ ticket.citizen.first_name }} {{ ticket.citizen.last_name }}</span>
-                                        <span class="small text-muted">{{ ticket.citizen.pre_enrollment_code or 'No PE
-                                            Code' }}</span>
-                                    </div>
+                                    {% if ticket.citizen.pre_enrollment_code %}
+                                    <span class="badge bg-info">{{ ticket.citizen.pre_enrollment_code }}</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
                                 </td>
                                 <td>{{ ticket.service_type.name_en or ticket.service_type.name_fr }}</td>
                                 <td>
@@ -159,7 +161,7 @@
                             {% endfor %}
                             {% else %}
                             <tr>
-                                <td colspan="8" class="text-center py-4 text-muted">No active tickets currently.</td>
+                                <td colspan="9" class="text-center py-4 text-muted">No active tickets currently.</td>
                             </tr>
                             {% endif %}
                         </tbody>
@@ -366,7 +368,7 @@
                     </tr>
                 `).join('');
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No active tickets</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No active tickets</td></tr>';
                 }
             })
             .catch(error => {

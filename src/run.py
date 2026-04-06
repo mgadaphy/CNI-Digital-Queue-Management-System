@@ -1,5 +1,6 @@
 import sys
 import os
+import random
 from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
@@ -9,11 +10,12 @@ from app import create_app, socketio
 def setup_database(app_instance):
     from app.extensions import db
     from app.models import Agent, ServiceType, SystemConfig, Station, Citizen, Queue
-    
+
     with app_instance.app_context():
         print("Creating database tables...")
         db.create_all()
 
+        # ── Admin ─────────────────────────────────────────────────────────────
         admin = Agent.query.filter_by(employee_id='ADMIN001').first()
         if not admin:
             print("Creating System Administrator (ADMIN001)...")
@@ -29,44 +31,40 @@ def setup_database(app_instance):
             admin.set_password('admin123')
             db.session.add(admin)
 
-        agent1 = Agent.query.filter_by(employee_id='AGT001').first()
-        if not agent1:
-            print("Creating default Agent 1 (AGT001)...")
-            agent1 = Agent(
-                employee_id='AGT001',
-                first_name='Marie',
-                last_name='Kouassi',
-                email='marie@cni.gov',
-                role='agent',
-                is_active=True,
-                status='available'
-            )
-            agent1.set_password('agent123')
-            db.session.add(agent1)
+        # ── 4 Agents ──────────────────────────────────────────────────────────
+        agents_data = [
+            ('AGT001', 'Marie',   'Kouassi', 'marie@cni.gov'),
+            ('AGT002', 'Kofi',    'Asante',  'kofi@cni.gov'),
+            ('AGT003', 'Ibrahim', 'Traore',  'ibrahim@cni.gov'),
+            ('AGT004', 'Aminata', 'Diallo',  'aminata@cni.gov'),
+        ]
+        agents = []
+        for emp_id, fname, lname, email in agents_data:
+            agent = Agent.query.filter_by(employee_id=emp_id).first()
+            if not agent:
+                print(f"Creating Agent {emp_id} ({fname} {lname})...")
+                agent = Agent(
+                    employee_id=emp_id,
+                    first_name=fname,
+                    last_name=lname,
+                    email=email,
+                    role='agent',
+                    is_active=True,
+                    status='available'
+                )
+                agent.set_password('agent123')
+                db.session.add(agent)
+            agents.append(agent)
+        db.session.flush()
 
-        agent2 = Agent.query.filter_by(employee_id='AGT002').first()
-        if not agent2:
-            print("Creating default Agent 2 (AGT002)...")
-            agent2 = Agent(
-                employee_id='AGT002',
-                first_name='Jean',
-                last_name='Bamba',
-                email='jean@cni.gov',
-                role='agent',
-                is_active=True,
-                status='available'
-            )
-            agent2.set_password('agent123')
-            db.session.add(agent2)
-
+        # ── Service Types ─────────────────────────────────────────────────────
         print("Initializing CNI Service Types...")
         services_data = [
-            {'code': 'NEW_APP',    'name_fr': 'Nouvelle Demande',  'name_en': 'New Application', 'priority': 10, 'duration': 15},
-            {'code': 'RENEWAL',    'name_fr': 'Renouvellement',    'name_en': 'Renewal',          'priority': 20, 'duration': 10},
-            {'code': 'COLLECTION', 'name_fr': 'Retrait',           'name_en': 'Collection',       'priority': 30, 'duration': 5},
-            {'code': 'CORRECTION', 'name_fr': 'Perte/Correction',  'name_en': 'Lost/Correction',  'priority': 40, 'duration': 20}
+            {'code': 'NEW_APP',    'name_fr': 'Nouvelle Demande', 'name_en': 'New Application', 'priority': 10, 'duration': 15},
+            {'code': 'RENEWAL',    'name_fr': 'Renouvellement',   'name_en': 'Renewal',          'priority': 20, 'duration': 10},
+            {'code': 'COLLECTION', 'name_fr': 'Retrait',          'name_en': 'Collection',       'priority': 30, 'duration': 5},
+            {'code': 'CORRECTION', 'name_fr': 'Perte/Correction', 'name_en': 'Lost/Correction',  'priority': 40, 'duration': 20}
         ]
-        
         db_services = {}
         for srv in services_data:
             service = ServiceType.query.filter_by(code=srv['code']).first()
@@ -80,117 +78,156 @@ def setup_database(app_instance):
                     is_active=True
                 )
                 db.session.add(service)
-                db.session.commit()
+                db.session.flush()
             db_services[srv['code']] = service
 
+        # ── System Config ─────────────────────────────────────────────────────
         print("Configuring System Preferences...")
-        config_auto = SystemConfig.query.filter_by(key='auto_assign_enabled').first()
-        if not config_auto:
-            config = SystemConfig(key='auto_assign_enabled', value='true')
-            db.session.add(config)
+        if not SystemConfig.query.filter_by(key='auto_assign_enabled').first():
+            db.session.add(SystemConfig(key='auto_assign_enabled', value='true'))
 
+        # ── 4 Stations (one per agent) ────────────────────────────────────────
         print("Building Workstations (Counters)...")
-        station1 = Station.query.filter_by(station_number='C01').first()
-        if not station1:
-            station1 = Station(station_number='C01', name='Counter 1 (Fast Track)', status='available', is_active=True)
-            db.session.add(station1)
-            
-        station2 = Station.query.filter_by(station_number='C02').first()
-        if not station2:
-            station2 = Station(station_number='C02', name='Counter 2 (Standard)', status='available', is_active=True)
-            db.session.add(station2)
-            
+        stations_data = [
+            ('C01', 'Counter 1 (Fast Track)'),
+            ('C02', 'Counter 2 (Standard)'),
+            ('C03', 'Counter 3 (Standard)'),
+            ('C04', 'Counter 4 (Special Needs)'),
+        ]
+        stations = []
+        for number, name in stations_data:
+            station = Station.query.filter_by(station_number=number).first()
+            if not station:
+                station = Station(station_number=number, name=name, status='available', is_active=True)
+                db.session.add(station)
+            stations.append(station)
         db.session.commit()
 
-        if agent1 and not agent1.current_station_id:
-            agent1.current_station_id = station1.id
-        if agent2 and not agent2.current_station_id:
-            agent2.current_station_id = station2.id
+        # Assign each agent to their counter
+        for agent, station in zip(agents, stations):
+            if agent and not agent.current_station_id:
+                agent.current_station_id = station.id
+        db.session.commit()
 
+        # ── 28 Sample Citizens ────────────────────────────────────────────────
         citizens_list = []
         if Citizen.query.count() == 0:
-            print("Registering Sample Citizens...")
+            print("Registering Sample Citizens (28)...")
+
+            def make_pe(dob: datetime) -> str:
+                return f"PE-{dob.strftime('%Y%m%d')}-{random.randint(100000, 999999)}"
+
             samples = [
-                ("Paul",  "Kone",   "1990-05-14", "PE-14051990-100001", "22501020304"),
-                ("Fatou", "Diallo", "1985-11-20", "PE-20111985-100002", "22505060708"),
-                ("Marc",  "Aka",    "2000-02-10", "PE-10022000-100003", "22509101112"),
-                ("Awa",   "Toure",  "1995-08-30", "PE-30081995-100004", "22513141516")
+                # (first, last, dob_str,      phone,         lang, special_needs)
+                ("David",    "Johnson",   "1988-03-15", "22501020304", "en", None),
+                ("Mariam",   "Ouattara",  "1992-07-22", "22505060708", "fr", None),
+                ("Aya",      "Bamba",     "1999-11-05", "22509101112", "fr", None),
+                ("Paul",     "Kone",      "1990-05-14", "22513141516", "en", None),
+                ("Fatou",    "Diallo",    "1985-11-20", "22517181920", "fr", None),
+                ("Marc",     "Aka",       "2000-02-10", "22521222324", "en", None),
+                ("Awa",      "Toure",     "1995-08-30", "22525262728", "fr", None),
+                ("Seun",     "Adeyemi",   "1983-04-18", "22529303132", "en", None),
+                ("Aisha",    "Coulibaly", "1997-12-03", "22533343536", "fr", "Mobilité réduite"),
+                ("Kwame",    "Mensah",    "1975-06-25", "22537383940", "en", None),
+                ("Nadia",    "Camara",    "2001-09-14", "22541424344", "fr", None),
+                ("Ibrahima", "Sow",       "1968-01-08", "22545464748", "fr", "Déficience visuelle"),
+                ("Grace",    "Asante",    "1994-03-27", "22549505152", "en", None),
+                ("Yusuf",    "Traore",    "1989-10-11", "22553545556", "fr", None),
+                ("Amina",    "Keita",     "2003-05-02", "22557585960", "fr", None),
+                ("Kofi",     "Boateng",   "1978-08-19", "22561626364", "en", None),
+                ("Chantal",  "N'Guessan", "1991-02-14", "22565666768", "fr", None),
+                ("Moussa",   "Doumbia",   "1986-07-07", "22569707172", "fr", None),
+                ("Esther",   "Koffi",     "1998-04-23", "22573747576", "en", None),
+                ("Lamine",   "Barry",     "1972-09-01", "22577787980", "fr", "Déficience auditive"),
+                ("Ramatou",  "Cisse",     "2002-11-16", "22581828384", "fr", None),
+                ("Emmanuel", "Ofori",     "1980-06-12", "22585868788", "en", None),
+                ("Mariame",  "Sylla",     "1993-01-29", "22589909192", "fr", None),
+                ("Didier",   "Yao",       "1987-08-04", "22593949596", "fr", None),
+                ("Fanta",    "Konate",    "2005-03-21", "22597989900", "fr", None),
+                ("Serge",    "Gnagne",    "1976-12-09", "22501122334", "fr", None),
+                ("Bintou",   "Diabate",   "1996-05-17", "22502233445", "fr", None),
+                ("Alexis",   "Kouame",    "1984-10-30", "22503344556", "fr", None),
             ]
-            for fname, lname, dob_str, pe_code, phone in samples:
+
+            for fname, lname, dob_str, phone, lang, special_needs in samples:
+                dob = datetime.strptime(dob_str, "%Y-%m-%d")
                 cit = Citizen(
                     first_name=fname,
                     last_name=lname,
-                    date_of_birth=datetime.strptime(dob_str, "%Y-%m-%d").date(),
-                    pre_enrollment_code=pe_code,
-                    preferred_language='en'
+                    date_of_birth=dob.date(),
+                    pre_enrollment_code=make_pe(dob),
+                    preferred_language=lang,
+                    special_needs=special_needs,
                 )
                 cit.phone_number = phone
                 db.session.add(cit)
                 citizens_list.append(cit)
+
             db.session.commit()
         else:
-            citizens_list = Citizen.query.limit(4).all()
+            citizens_list = Citizen.query.limit(28).all()
 
-        if Queue.query.count() == 0 and len(citizens_list) >= 4:
+        # ── Sample Queue Traffic ───────────────────────────────────────────────
+        if Queue.query.count() == 0 and len(citizens_list) >= 8:
             print("Generating Sample Queue Traffic...")
-            
-            q1 = Queue(
-                citizen_id=citizens_list[0].id,
-                service_type_id=db_services['NEW_APP'].id,
-                ticket_number='N-001',
-                status='waiting',
-                priority_score=10,
-                created_at=datetime.utcnow() - timedelta(minutes=5)
-            )
-            
-            q2 = Queue(
-                citizen_id=citizens_list[1].id,
-                service_type_id=db_services['RENEWAL'].id,
-                ticket_number='R-001',
-                status='assigned',
-                priority_score=20,
-                agent_id=agent1.id,
-                created_at=datetime.utcnow() - timedelta(minutes=10)
-            )
-            
-            q3 = Queue(
-                citizen_id=citizens_list[2].id,
-                service_type_id=db_services['COLLECTION'].id,
-                ticket_number='C-001',
-                status='in_progress',
-                priority_score=30,
-                agent_id=agent2.id,
-                station_id=station2.id,
-                created_at=datetime.utcnow() - timedelta(minutes=20),
-                called_at=datetime.utcnow() - timedelta(minutes=5)
-            )
-            
-            q4 = Queue(
-                citizen_id=citizens_list[3].id,
-                service_type_id=db_services['CORRECTION'].id,
-                ticket_number='L-001',
-                status='completed',
-                priority_score=40,
-                agent_id=agent1.id,
-                station_id=station1.id,
-                created_at=datetime.utcnow() - timedelta(minutes=60),
-                called_at=datetime.utcnow() - timedelta(minutes=45),
-                completed_at=datetime.utcnow() - timedelta(minutes=30),
-                wait_time=15,
-                service_time=15
-            )
-            
-            db.session.add_all([q1, q2, q3, q4])
+            service_codes = list(db_services.keys())
+            ticket_prefixes = {'NEW_APP': 'N', 'RENEWAL': 'R', 'COLLECTION': 'C', 'CORRECTION': 'L'}
+            counters = {'NEW_APP': 1, 'RENEWAL': 1, 'COLLECTION': 1, 'CORRECTION': 1}
+
+            queue_specs = [
+                # (citizen_idx, svc_code,    status,       agent_idx, station_idx, mins_ago_created, mins_ago_called, mins_ago_done, wait, svc)
+                (0,  'COLLECTION', 'assigned',    0, None, 15,  None, None, None, None),
+                (1,  'RENEWAL',    'assigned',    1, None, 17,  None, None, None, None),
+                (2,  'CORRECTION', 'assigned',    2, None, 17,  None, None, None, None),
+                (3,  'NEW_APP',    'waiting',  None, None, 10,  None, None, None, None),
+                (4,  'RENEWAL',    'waiting',  None, None,  8,  None, None, None, None),
+                (5,  'COLLECTION', 'in_progress', 3, 3,    25,  10,   None, None, None),
+                (6,  'NEW_APP',    'in_progress', 0, 0,    30,  12,   None, None, None),
+                (7,  'CORRECTION', 'completed',   1, 1,    90,  75,   60,   15,   15),
+            ]
+
+            queues = []
+            for (ci, svc, status, ai, si, mc, mcalled, mdone, wt, svct) in queue_specs:
+                svc_obj = db_services[svc]
+                prefix = ticket_prefixes[svc]
+                num = counters[svc]
+                counters[svc] += 1
+                ticket_num = f"{prefix}-{num:03d}"
+
+                q = Queue(
+                    citizen_id=citizens_list[ci].id,
+                    service_type_id=svc_obj.id,
+                    ticket_number=ticket_num,
+                    status=status,
+                    priority_score=svc_obj.priority_level,
+                    created_at=datetime.utcnow() - timedelta(minutes=mc),
+                )
+                if ai is not None:
+                    q.agent_id = agents[ai].id
+                if si is not None:
+                    q.station_id = stations[si].id
+                if mcalled is not None:
+                    q.called_at = datetime.utcnow() - timedelta(minutes=mcalled)
+                if mdone is not None:
+                    q.completed_at = datetime.utcnow() - timedelta(minutes=mdone)
+                    q.wait_time = wt
+                    q.service_time = svct
+                queues.append(q)
+
+            db.session.add_all(queues)
             db.session.commit()
 
-        print("\\n========================================================")
-        print("Setup Complete! The project is fully seeded and ready.")
-        print("========================================================\\n")
-        print("1. Admin Login:   ADMIN001 / admin123")
-        print("2. Agent Login:   AGT001   / agent123")
-        print("                  AGT002   / agent123")
-        print("\\nStart Server Command:")
-        print("cd src && python run.py")
+        print("\n========================================================")
+        print("  Setup Complete! CNI Queue System seeded and ready.")
+        print("========================================================\n")
+        print("  Admin Login : ADMIN001 / admin123")
+        print("  Agent Login : AGT001   / agent123  (Marie Kouassi)")
+        print("                AGT002   / agent123  (Kofi Asante)")
+        print("                AGT003   / agent123  (Ibrahim Traore)")
+        print("                AGT004   / agent123  (Aminata Diallo)")
+        print(f"\n  Citizens registered : {Citizen.query.count()}")
+        print("\n  Start Server: cd src && python run.py\n")
+
 
 app = create_app()
 
@@ -198,5 +235,5 @@ if __name__ == '__main__':
     if '--setup' in sys.argv:
         setup_database(app)
         sys.exit(0)
-    
+
     socketio.run(app, debug=True)

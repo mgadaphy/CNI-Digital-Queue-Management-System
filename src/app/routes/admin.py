@@ -11,6 +11,7 @@ from ..extensions import csrf
 from ..utils.websocket_utils import emit_queue_update, emit_agent_status_update, emit_metrics_update, websocket_error_handler
 from ..utils.optimized_queries import query_optimizer
 from ..utils.realtime_sync import emit_queue_update_sync, emit_agent_status_sync, emit_ticket_assignment_sync, emit_optimization_sync, EventPriority
+from ..utils.pe_code_generator import generate_unique_pe_code
 from functools import wraps
 import traceback
 import logging
@@ -225,9 +226,56 @@ def manage_citizens():
     today = datetime.utcnow().date()
     today_registrations = Citizen.query.filter(func.date(Citizen.created_at) == today).count()
     
-    return render_template('admin_citizens.html', 
+    return render_template('admin_citizens.html',
                          citizens=citizens,
                          today_registrations=today_registrations)
+
+
+@admin_bp.route('/citizens/create', methods=['POST'])
+@login_required
+@handle_database_errors
+def create_citizen():
+    """Create a new citizen record"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'JSON body required'}), 400
+
+    first_name = data.get('first_name', '').strip()
+    last_name = data.get('last_name', '').strip()
+    if not first_name or not last_name:
+        return jsonify({'success': False, 'message': 'First name and last name are required'}), 400
+
+    pe_code = (data.get('pre_enrollment_code') or '').strip() or None
+    if not pe_code:
+        pe_code = generate_unique_pe_code()
+
+    dob = None
+    dob_str = (data.get('date_of_birth') or '').strip()
+    if dob_str:
+        try:
+            dob = datetime.strptime(dob_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'success': False, 'message': 'date_of_birth must be YYYY-MM-DD'}), 400
+
+    citizen = Citizen(
+        first_name=first_name,
+        last_name=last_name,
+        pre_enrollment_code=pe_code,
+        date_of_birth=dob,
+        preferred_language=data.get('preferred_language') or 'fr',
+        special_needs=data.get('special_needs') or None,
+    )
+    phone_val = (data.get('phone_number') or '').strip()
+    if phone_val:
+        citizen.phone_number = phone_val
+    email_val = (data.get('email') or '').strip()
+    if email_val:
+        citizen.email = email_val
+
+    db.session.add(citizen)
+    db.session.commit()
+    return jsonify({'success': True, 'citizen_id': citizen.id}), 201
+
 
 @admin_bp.route('/manage_queue')
 @login_required
@@ -1577,7 +1625,7 @@ def edit_citizen(citizen_id):
             citizen.pre_enrollment_code = data.get('pre_enrollment_code')
             citizen.date_of_birth = datetime.strptime(data.get('date_of_birth'), '%Y-%m-%d').date() if data.get('date_of_birth') else citizen.date_of_birth
             citizen.email = data.get('email')
-            citizen.phone = data.get('phone_number')
+            citizen.phone_number = data.get('phone_number')
             citizen.preferred_language = data.get('preferred_language')
             citizen.special_needs = data.get('special_needs')
             
